@@ -15,6 +15,9 @@ export default defineConfig({
         short_name: 'VôleiAssist',
         description: 'Gerenciador de rachas de vôlei',
         theme_color: '#2563eb',
+        background_color: '#f8fafc',
+        display: 'standalone',
+        start_url: '/volleyball-assist/',
         icons: [
           {
             src: 'pwa-192x192.png',
