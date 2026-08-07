@@ -13,23 +13,30 @@ export function drawTeams({
   numTeams: requestedNumTeams,
   priorityPlayerIds = []
 }) {
-  // Mínimo de 2 times para haver uma partida
-  const numTeams = Math.max(2, requestedNumTeams);
-  
+  const perTeam = Math.max(1, playersPerTeam);
+  const maxTeams = Math.max(1, requestedNumTeams);
+
+  // Times são formados completos até o máximo configurado; o excedente vai pra reserva.
+  // Ex.: 15 jogadores com 3x6 -> 2 times de 6 e 3 na reserva.
+  const numTeams = Math.min(maxTeams, Math.floor(players.length / perTeam));
+
+  if (numTeams < 2) {
+    return { teams: [], bench: players };
+  }
+
   // Separa e embaralha para garantir aleatoriedade dentro das categorias
   const priorityPlayers = shuffleArray(players.filter(p => priorityPlayerIds.includes(p.id)));
   const regularPlayers = shuffleArray(players.filter(p => !priorityPlayerIds.includes(p.id)));
 
   const teams = Array.from({ length: numTeams }, () => []);
-  
-  // Função auxiliar para distribuir jogadores em times específicos de forma balanceada (round-robin)
+
+  // Distribui jogadores nos times em rodadas (round-robin) até o limite por time
   const distributeToTeams = (playerList, teamIndices) => {
     let listIdx = 0;
-    // Enquanto houver jogadores e espaço nos times selecionados
     while (listIdx < playerList.length) {
       let addedInRound = false;
       for (const teamIdx of teamIndices) {
-        if (listIdx < playerList.length && teams[teamIdx].length < playersPerTeam) {
+        if (listIdx < playerList.length && teams[teamIdx].length < perTeam) {
           teams[teamIdx].push(playerList[listIdx]);
           listIdx++;
           addedInRound = true;
@@ -51,11 +58,9 @@ export function drawTeams({
     remainingPriority = distributeToTeams(remainingPriority, otherTeamIndices);
   }
 
-  // 3. Jogadores regulares preenchem as vagas restantes em todos os times
+  // 3. Regulares (e prioritários que sobraram) preenchem as vagas restantes
   const allTeamIndices = Array.from({ length: numTeams }, (_, i) => i);
-  // Unimos eventuais prioritários que sobraram (caso TODOS os times estejam cheios) com os regulares
-  const poolForRest = [...remainingPriority, ...regularPlayers];
-  distributeToTeams(poolForRest, allTeamIndices);
+  distributeToTeams([...remainingPriority, ...regularPlayers], allTeamIndices);
 
   const usedPlayerIds = teams.flat().map(p => p.id);
   const bench = players.filter(p => !usedPlayerIds.includes(p.id));
