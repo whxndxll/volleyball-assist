@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { drawTeams } from './utils/teamLogic';
 import { setsToWin } from './lib/match';
+import { computePlayerStats } from './lib/stats';
 import Toast from './components/Toast';
 import RachaList from './components/RachaList';
 import RachaDetail from './components/RachaDetail';
@@ -9,6 +10,7 @@ import PlayerList from './components/PlayerList';
 import DrawScreen from './components/DrawScreen';
 import MatchHistory from './components/MatchHistory';
 import Scoreboard from './components/Scoreboard';
+import StatsScreen from './components/StatsScreen';
 
 function App() {
   const [rachas, setRachas, isLoading] = useLocalStorage('rachas', []);
@@ -34,6 +36,21 @@ function App() {
   // State for scoreboard
   const [matches, setMatches, isMatchesLoading] = useLocalStorage('matches', []);
   const [currentMatchId, setCurrentMatchId] = useState(null);
+  const [matchConfig, setMatchConfig] = useState({ targetPoints: 25, bestOf: 3 });
+
+  // State for theme
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('va-theme');
+    if (saved) return saved === 'dark';
+    return window.matchMedia
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : false;
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+    localStorage.setItem('va-theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
 
   // State for presence import
   const [showImport, setShowImport] = useState(false);
@@ -63,6 +80,8 @@ function App() {
     matches.filter(m => m.rachaId === activeRachaId).sort((a, b) => b.createdAt - a.createdAt),
     [matches, activeRachaId]
   );
+
+  const playerStats = useMemo(() => computePlayerStats(matchesForRacha), [matchesForRacha]);
 
   const currentMatch = useMemo(() =>
     matches.find(m => m.id === currentMatchId) || activeMatch,
@@ -339,8 +358,8 @@ function App() {
       id: crypto.randomUUID(),
       rachaId: activeRachaId,
       createdAt: Date.now(),
-      targetPoints: 25,
-      bestOf: 3,
+      targetPoints: matchConfig.targetPoints,
+      bestOf: matchConfig.bestOf,
       finished: false,
       teams: drawResult.teams.map((players, i) => ({
         id: crypto.randomUUID(),
@@ -401,14 +420,14 @@ function App() {
 
   if (isLoading || isMatchesLoading) {
     return (
-      <div className="max-w-md mx-auto p-4 min-h-screen flex items-center justify-center bg-slate-50 text-slate-900">
+      <div className="max-w-md mx-auto p-4 min-h-screen flex items-center justify-center bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <p className="text-blue-600 font-medium">Carregando...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-slate-50 text-slate-900">
+    <div className="max-w-md mx-auto min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {view === 'list' && (
         <RachaList
           rachas={rachas}
@@ -424,6 +443,8 @@ function App() {
           onStartEditRacha={startEditRacha}
           onSaveRachaName={saveRachaName}
           onOpenRacha={(racha) => { setActiveRachaId(racha.id); setView('detail'); }}
+          darkMode={darkMode}
+          onToggleTheme={() => setDarkMode(d => !d)}
         />
       )}
 
@@ -435,6 +456,7 @@ function App() {
           onBack={() => setView('list')}
           onPlayers={() => setView('players')}
           onMatches={() => { setCurrentMatchId(null); setView('matches'); }}
+          onStats={() => setView('stats')}
           onNewDraw={() => {
             setSelectedPlayerIds([]);
             setPriorityPlayerIds([]);
@@ -442,6 +464,8 @@ function App() {
             setDrawResult(null);
             setView('draw');
           }}
+          darkMode={darkMode}
+          onToggleTheme={() => setDarkMode(d => !d)}
         />
       )}
 
@@ -497,6 +521,8 @@ function App() {
           playersPerTeam={playersPerTeam}
           shortForTwoTeams={shortForTwoTeams}
           totalSelected={totalSelected}
+          matchConfig={matchConfig}
+          setMatchConfig={setMatchConfig}
         />
       )}
 
@@ -520,6 +546,14 @@ function App() {
           onFinishMatch={() => finishMatch(currentMatch.id)}
           onResetMatch={() => resetMatch(currentMatch.id)}
           onBack={() => { setCurrentMatchId(null); setView('matches'); }}
+        />
+      )}
+
+      {view === 'stats' && activeRacha && (
+        <StatsScreen
+          rachaName={activeRacha.name}
+          stats={playerStats}
+          onBack={() => setView('detail')}
         />
       )}
 

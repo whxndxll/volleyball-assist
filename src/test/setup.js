@@ -6,5 +6,7 @@ import { cleanup } from '@testing-library/react';
 
 afterEach(async () => {
   cleanup();
+  localStorage.clear();
+  document.documentElement.classList.remove('dark');
   await localforage.clear();
 });
