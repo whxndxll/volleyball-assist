@@ -1,4 +1,5 @@
-import { Plus, Users, Trash2, ChevronRight, Pencil, Sun, Moon, Download, Upload } from 'lucide-react';
+import { Plus, Users, Trash2, ChevronRight, Pencil, Sun, Moon, Download, Upload, Play } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 export default function RachaList({
   rachas,
@@ -14,6 +15,8 @@ export default function RachaList({
   onStartEditRacha,
   onSaveRachaName,
   onOpenRacha,
+  activeMatch,
+  onOpenPlacar,
   darkMode,
   onToggleTheme,
   onExport,
@@ -27,14 +30,29 @@ export default function RachaList({
             <h1 className="text-3xl font-bold text-blue-600">Vôlei Assist</h1>
             <p className="text-slate-500 dark:text-slate-400">Gerencie seus rachas com facilidade</p>
           </div>
-          <button
-            onClick={onToggleTheme}
-            className="p-2 rounded-lg text-slate-500 hover:text-blue-600 transition-colors dark:text-slate-400"
-            title={darkMode ? 'Modo claro' : 'Modo escuro'}
-            aria-label={darkMode ? 'Ativar modo claro' : 'Ativar modo escuro'}
-          >
-            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onOpenPlacar}
+              className={cn(
+                'p-2 rounded-lg transition-colors',
+                activeMatch
+                  ? 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400'
+                  : 'text-slate-500 hover:text-blue-600 dark:text-slate-400'
+              )}
+              title={activeMatch ? 'Placar em andamento' : 'Placar'}
+              aria-label="Abrir placar"
+            >
+              <Play size={20} />
+            </button>
+            <button
+              onClick={onToggleTheme}
+              className="p-2 rounded-lg text-slate-500 hover:text-blue-600 transition-colors dark:text-slate-400"
+              title={darkMode ? 'Modo claro' : 'Modo escuro'}
+              aria-label={darkMode ? 'Ativar modo claro' : 'Ativar modo escuro'}
+            >
+              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -108,7 +126,7 @@ export default function RachaList({
                   title="Renomear racha"
                   aria-label={`Renomear racha ${racha.name}`}
                 >
-                  <Pencil size={16} />
+                  <Pencil size={18} />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); onDeleteRacha(racha); }}

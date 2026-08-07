@@ -95,7 +95,7 @@ function App() {
   // Se a navegação restaurada aponta para dados que não existem (ex.: racha deletado), volta para a lista
   useEffect(() => {
     if (isLoading || isMatchLoading) return;
-    if (view !== 'list' && !activeRacha) {
+    if (view !== 'list' && view !== 'match' && !activeRacha) {
       setView('list');
     } else if (view === 'match' && !match) {
       setView('detail');
@@ -360,7 +360,7 @@ function App() {
     const newMatch = {
       id: uuid(),
       rachaId: activeRachaId,
-      targetPoints: matchConfig.targetPoints,
+      targetPoints: Math.max(1, Number(matchConfig.targetPoints) || 25),
       bestOf: matchConfig.bestOf,
       finished: false,
       teams: drawResult.teams.map((players, i) => ({
@@ -418,9 +418,12 @@ function App() {
     } : prev));
   };
 
-  const finalizeMatch = () => {
-    setMatch(null);
-    setView('detail');
+  const openPlacarFromHome = () => {
+    if (match) {
+      setView('match');
+    } else {
+      showToast('Nenhum placar em andamento. Abra um racha e faça um sorteio para iniciar.');
+    }
   };
 
   const handleExport = () => {
@@ -483,6 +486,8 @@ function App() {
           onStartEditRacha={startEditRacha}
           onSaveRachaName={saveRachaName}
           onOpenRacha={(racha) => { setActiveRachaId(racha.id); setView('detail'); }}
+          activeMatch={match}
+          onOpenPlacar={openPlacarFromHome}
           darkMode={darkMode}
           onToggleTheme={() => setDarkMode(d => !d)}
           onExport={handleExport}
@@ -569,17 +574,16 @@ function App() {
         />
       )}
 
-      {view === 'match' && match && activeRacha && (
+      {view === 'match' && match && (
         <Scoreboard
-          rachaName={activeRacha.name}
+          rachaName={rachas.find(r => r.id === match.rachaId)?.name ?? 'Placar'}
           match={match}
           winner={matchWinner}
           onAddPoint={(teamId) => addPoint(teamId)}
           onRemovePoint={(teamId) => removePoint(teamId)}
           onFinishMatch={finishMatch}
           onResetMatch={resetMatch}
-          onFinalize={finalizeMatch}
-          onBack={() => setView('detail')}
+          onBack={() => setView(activeRacha ? 'detail' : 'list')}
         />
       )}
 

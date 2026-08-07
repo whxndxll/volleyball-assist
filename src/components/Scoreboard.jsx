@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { ArrowLeft, Flag, RotateCcw, Check } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, Flag, RotateCcw, Trophy, MonitorSmartphone } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { TEAM_COLORS, setsToWin } from '../lib/match';
 
@@ -13,7 +13,6 @@ export default function Scoreboard({
   onRemovePoint,
   onFinishMatch,
   onResetMatch,
-  onFinalize,
   onBack,
 }) {
   const gesture = useRef(null);
@@ -24,6 +23,31 @@ export default function Scoreboard({
   const maxPoints = Math.max(t0.points, t1.points);
   const inEndRange = maxPoints >= match.targetPoints - 1;
   const leader = t0.points > t1.points ? t0 : t1;
+
+  const [isPortrait, setIsPortrait] = useState(
+    () => typeof window.matchMedia === 'function' && window.matchMedia('(orientation: portrait)').matches
+  );
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const orientation = screen.orientation;
+    let locked = false;
+    if (orientation && typeof orientation.lock === 'function') {
+      orientation
+        .lock('landscape')
+        .then(() => { locked = true; })
+        .catch(() => {});
+    }
+    const mql = window.matchMedia('(orientation: portrait)');
+    const onChange = (e) => setIsPortrait(e.matches);
+    mql.addEventListener('change', onChange);
+    return () => {
+      mql.removeEventListener('change', onChange);
+      if (locked && orientation && typeof orientation.unlock === 'function') {
+        orientation.unlock();
+      }
+    };
+  }, []);
 
   const statusFor = (team) => {
     if (match.finished) return null;
@@ -44,15 +68,13 @@ export default function Scoreboard({
 
   const moveGesture = (e, teamId) => {
     const g = gesture.current;
-    if (!g) return;
+    if (!g || g.moved) return;
     const delta = e.clientY - g.startY;
     if (delta > DRAG_THRESHOLD) {
       g.moved = true;
-      g.startY = e.clientY;
       onRemovePoint(teamId);
     } else if (delta < -DRAG_THRESHOLD) {
       g.moved = true;
-      g.startY = e.clientY;
       onAddPoint(teamId);
     }
   };
@@ -75,13 +97,25 @@ export default function Scoreboard({
     }
   };
 
+  if (isPortrait) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-950 text-white flex flex-col items-center justify-center gap-6 p-8 text-center">
+        <MonitorSmartphone size={64} className="text-blue-400" />
+        <div>
+          <p className="text-2xl font-bold mb-2">Gire o aparelho</p>
+          <p className="text-slate-400 text-sm">O placar abre em modo paisagem (horizontal).</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 pb-32 flex flex-col min-h-screen">
       <button
         onClick={onBack}
         className="flex items-center gap-2 text-slate-500 mb-4 hover:text-blue-600 transition-colors dark:text-slate-400"
       >
-        <ArrowLeft size={20} /> Painel do Racha
+        <ArrowLeft size={20} /> Voltar
       </button>
 
       <header className="mb-4 flex items-center justify-between">
@@ -94,15 +128,6 @@ export default function Scoreboard({
           <p className="text-xs">até {match.targetPoints} pts</p>
         </div>
       </header>
-
-      {match.finished && winner && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-xl mb-4 text-center dark:bg-emerald-950/60 dark:border-emerald-900 dark:text-emerald-300">
-          <p className="font-bold text-lg">{winner.name} venceu!</p>
-          <p className="text-sm">
-            {match.teams.map(t => `${t.name} ${t.sets}`).join(' · ')}
-          </p>
-        </div>
-      )}
 
       <div className="grid grid-cols-2 gap-3 flex-1 content-stretch">
         {match.teams.map((team, idx) => {
@@ -165,48 +190,62 @@ export default function Scoreboard({
         Toque no número para pontuar · arraste para baixo para desfazer
       </p>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-slate-100 dark:bg-slate-900/80 dark:border-slate-700">
-        <div className="max-w-md mx-auto">
-          {match.finished ? (
+      {match.finished ? (
+        <div className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-6">
+          <div
+            role="dialog"
+            aria-label="Resultado da partida"
+            className="bg-white dark:bg-slate-800 rounded-3xl p-8 w-full max-w-sm shadow-2xl text-center"
+          >
+            <div className="mx-auto mb-4 bg-amber-100 dark:bg-amber-900/40 p-4 rounded-full w-fit text-amber-500">
+              <Trophy size={40} />
+            </div>
+            <h2 className="text-2xl font-black mb-1">
+              {winner ? `${winner.name} venceu!` : 'Partida encerrada'}
+            </h2>
+            <p className="text-slate-500 mb-6 dark:text-slate-400">
+              {match.teams.map(t => `${t.name} ${t.sets}`).join(' · ')}
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={onResetMatch}
-                className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2"
+                className="flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors"
               >
                 <RotateCcw size={18} /> Zerar placar
               </button>
               <button
-                onClick={onFinalize}
-                className="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2"
-              >
-                <Check size={18} /> Finalizar
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-3">
-              <button
-                onClick={onFinishMatch}
-                className="w-full bg-slate-800 text-white py-4 rounded-xl font-bold shadow-lg transition-all flex items-center justify-center gap-2 dark:bg-slate-700"
-              >
-                <Flag size={18} /> Encerrar
-              </button>
-              <button
-                onClick={onResetMatch}
-                className="w-full bg-slate-200 text-slate-700 py-4 rounded-xl font-bold transition-all dark:bg-slate-700 dark:text-slate-300"
-                title="Zerar placar"
-              >
-                Zerar
-              </button>
-              <button
                 onClick={onBack}
-                className="w-full bg-white border border-slate-200 text-slate-600 py-4 rounded-xl font-bold transition-all dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300"
+                className="flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-bold hover:border-blue-200 hover:text-blue-600 transition-colors dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300"
               >
-                Voltar
+                <ArrowLeft size={18} /> Voltar
               </button>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-slate-100 dark:bg-slate-900/80 dark:border-slate-700">
+          <div className="max-w-md mx-auto grid grid-cols-3 gap-3">
+            <button
+              onClick={onFinishMatch}
+              className="flex items-center justify-center gap-2 w-full bg-slate-800 text-white py-4 rounded-xl font-bold shadow-lg transition-all dark:bg-slate-700"
+            >
+              <Flag size={18} /> Encerrar
+            </button>
+            <button
+              onClick={onResetMatch}
+              className="flex items-center justify-center gap-2 w-full bg-slate-200 text-slate-700 py-4 rounded-xl font-bold transition-all dark:bg-slate-700 dark:text-slate-300"
+            >
+              <RotateCcw size={18} /> Zerar
+            </button>
+            <button
+              onClick={onBack}
+              className="flex items-center justify-center gap-2 w-full bg-white border border-slate-200 text-slate-600 py-4 rounded-xl font-bold transition-all dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300"
+            >
+              <ArrowLeft size={18} /> Voltar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -64,11 +64,37 @@ describe('App - scoreboard', () => {
     expect(within(team1Card).getByText('1')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Encerrar' }));
-    expect(screen.getByRole('button', { name: 'Finalizar' })).toBeInTheDocument();
+    const overlay = screen.getByRole('dialog', { name: 'Resultado da partida' });
+    expect(within(overlay).getByText('Partida encerrada')).toBeInTheDocument();
+    expect(within(overlay).getByRole('button', { name: /Zerar placar/ })).toBeInTheDocument();
+    expect(within(overlay).getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Zerar placar/ }));
     expect(within(screen.getByRole('button', { name: 'Pontuar Time 1' })).getByText('0')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Encerrar' })).toBeInTheDocument();
+  });
+
+  it('opens the placar from the home screen when a match exists', async () => {
+    await localforage.setItem('rachas', [rachaWithPlayers(['Ana', 'Bia'])]);
+    await localforage.setItem('activeMatch', runningMatch());
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(await screen.findByRole('button', { name: 'Abrir placar' }));
+
+    expect(await screen.findByText('Placar')).toBeInTheDocument();
+  });
+
+  it('shows a hint when trying to open the placar with no match', async () => {
+    await localforage.setItem('rachas', [rachaWithPlayers(['Ana'])]);
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(await screen.findByRole('button', { name: 'Abrir placar' }));
+
+    expect(await screen.findByText(/Nenhum placar em andamento/)).toBeInTheDocument();
   });
 });
 
@@ -88,8 +114,10 @@ describe('App - auto set end', () => {
     await score(user, 'Time 1', 3);
 
     expect(await screen.findByText('Time 1 venceu!')).toBeInTheDocument();
-    expect(screen.getByText('Time 1 2 · Time 2 1')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Finalizar' })).toBeInTheDocument();
+    const overlay = screen.getByRole('dialog', { name: 'Resultado da partida' });
+    expect(within(overlay).getByText('Time 1 2 · Time 2 1')).toBeInTheDocument();
+    expect(within(overlay).getByRole('button', { name: /Zerar placar/ })).toBeInTheDocument();
+    expect(within(overlay).getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
   });
 
   it('keeps playing on deuce until a team opens a 2-point lead', async () => {

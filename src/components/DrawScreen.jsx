@@ -127,7 +127,13 @@ export default function DrawScreen({
                   type="number"
                   min="1"
                   value={matchConfig.targetPoints}
-                  onChange={(e) => setMatchConfig({ ...matchConfig, targetPoints: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setMatchConfig({ ...matchConfig, targetPoints: v === '' ? '' : Math.max(1, parseInt(v, 10) || 1) });
+                  }}
+                  onBlur={() => {
+                    if (matchConfig.targetPoints === '') setMatchConfig({ ...matchConfig, targetPoints: 25 });
+                  }}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                 />
               </div>
@@ -188,7 +194,13 @@ export default function DrawScreen({
                   type="number"
                   min="1"
                   value={config.playersPerTeam}
-                  onChange={(e) => setConfig({ ...config, playersPerTeam: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setConfig({ ...config, playersPerTeam: v === '' ? '' : Math.max(1, parseInt(v, 10) || 1) });
+                  }}
+                  onBlur={() => {
+                    if (config.playersPerTeam === '') setConfig({ ...config, playersPerTeam: 6 });
+                  }}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                 />
               </div>
@@ -198,7 +210,13 @@ export default function DrawScreen({
                   type="number"
                   min="2"
                   value={config.numTeams}
-                  onChange={(e) => setConfig({ ...config, numTeams: Math.max(2, parseInt(e.target.value, 10) || 2) })}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setConfig({ ...config, numTeams: v === '' ? '' : Math.max(2, parseInt(v, 10) || 2) });
+                  }}
+                  onBlur={() => {
+                    if (config.numTeams === '') setConfig({ ...config, numTeams: 2 });
+                  }}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                 />
               </div>
