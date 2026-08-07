@@ -1,8 +1,12 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { drawTeams } from './utils/teamLogic';
 import { setsToWin } from './lib/match';
 import { computePlayerStats } from './lib/stats';
+import { uuid } from './lib/id';
+import { parsePresenceNames, stripCaptainMark, buildTeamsText } from './lib/presence';
+import { serializeBackup, parseBackup } from './lib/backup';
+import { useToast } from './hooks/useToast';
 import Toast from './components/Toast';
 import RachaList from './components/RachaList';
 import RachaDetail from './components/RachaDetail';
@@ -12,10 +16,27 @@ import MatchHistory from './components/MatchHistory';
 import Scoreboard from './components/Scoreboard';
 import StatsScreen from './components/StatsScreen';
 
+const readSession = (key) => {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const saveSession = (key, value) => {
+  try {
+    if (value) sessionStorage.setItem(key, value);
+    else sessionStorage.removeItem(key);
+  } catch {
+    // sessionStorage pode ser bloqueado (ex.: navegação privada)
+  }
+};
+
 function App() {
   const [rachas, setRachas, isLoading] = useLocalStorage('rachas', []);
-  const [activeRachaId, setActiveRachaId] = useState(null);
-  const [view, setView] = useState('list'); // list, detail, players, draw, matches, match
+  const [activeRachaId, setActiveRachaId] = useState(() => readSession('va-active-racha'));
+  const [view, setView] = useState(() => readSession('va-view') || 'list'); // list, detail, players, draw, matches, match, stats
   const [newRachaName, setNewRachaName] = useState('');
   const [newPlayerName, setNewPlayerName] = useState('');
   const [rachaError, setRachaError] = useState('');
@@ -33,31 +54,31 @@ function App() {
   const [config, setConfig] = useState({ playersPerTeam: 6, numTeams: 2 });
   const [drawResult, setDrawResult] = useState(null);
 
-  // State for scoreboard
-  const [matches, setMatches, isMatchesLoading] = useLocalStorage('matches', []);
-  const [currentMatchId, setCurrentMatchId] = useState(null);
-  const [matchConfig, setMatchConfig] = useState({ targetPoints: 25, bestOf: 3 });
-
-  // State for theme
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('va-theme');
-    if (saved) return saved === 'dark';
-    return window.matchMedia
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      : false;
-  });
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', darkMode);
-    localStorage.setItem('va-theme', darkMode ? 'dark' : 'light');
-  }, [darkMode]);
-
   // State for presence import
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState('');
 
-  const [toast, setToast] = useState(null);
-  const toastTimer = useRef(null);
+  // State for scoreboard
+  const [matches, setMatches, isMatchesLoading] = useLocalStorage('matches', []);
+  const [currentMatchId, setCurrentMatchId] = useState(() => readSession('va-current-match'));
+  const [matchConfig, setMatchConfig] = useState({ targetPoints: 25, bestOf: 3 });
+
+  // State for theme
+  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+    localStorage.setItem('va-theme', darkMode ? 'dark' : 'light');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', darkMode ? '#0f172a' : '#2563eb');
+  }, [darkMode]);
+
+  // Persist navigation across refresh
+  useEffect(() => { saveSession('va-view', view); }, [view]);
+  useEffect(() => { saveSession('va-active-racha', activeRachaId); }, [activeRachaId]);
+  useEffect(() => { saveSession('va-current-match', currentMatchId); }, [currentMatchId]);
+
+  const { toast, showToast, dismissToast } = useToast();
 
   const activeRacha = useMemo(() =>
     rachas.find(r => r.id === activeRachaId),
@@ -92,16 +113,15 @@ function App() {
     ? currentMatch.teams.find(t => t.sets >= setsToWin(currentMatch)) || null
     : null;
 
-  const showToast = (message, actionLabel, onAction) => {
-    clearTimeout(toastTimer.current);
-    setToast({ message, actionLabel, onAction });
-    toastTimer.current = setTimeout(() => setToast(null), 5000);
-  };
-
-  const dismissToast = () => {
-    clearTimeout(toastTimer.current);
-    setToast(null);
-  };
+  // Se a navegação restaurada aponta para dados que não existem (ex.: racha deletado), volta para a lista
+  useEffect(() => {
+    if (isLoading || isMatchesLoading) return;
+    if (view !== 'list' && !activeRacha) {
+      setView('list');
+    } else if (view === 'match' && !currentMatch) {
+      setView('matches');
+    }
+  }, [isLoading, isMatchesLoading, view, activeRacha, currentMatch]);
 
   const addRacha = () => {
     const name = newRachaName.trim();
@@ -111,7 +131,7 @@ function App() {
       return;
     }
     const newRacha = {
-      id: crypto.randomUUID(),
+      id: uuid(),
       name,
       players: []
     };
@@ -127,7 +147,13 @@ function App() {
       .filter(Boolean);
     setRachas(prev => prev.filter(r => r.id !== racha.id));
     setMatches(prev => prev.filter(m => m.rachaId !== racha.id));
-    if (activeRachaId === racha.id) setView('list');
+    if (activeRachaId === racha.id) {
+      setActiveRachaId(null);
+      setView('list');
+    }
+    if (currentMatchId && rachaMatches.some(({ match }) => match.id === currentMatchId)) {
+      setCurrentMatchId(null);
+    }
     showToast('Racha excluído', 'Desfazer', () => {
       setRachas(prev => {
         if (prev.some(r => r.id === racha.id)) return prev;
@@ -176,7 +202,7 @@ function App() {
       if (r.id === activeRachaId) {
         return {
           ...r,
-          players: [...r.players, { id: crypto.randomUUID(), name: trimmed }]
+          players: [...r.players, { id: uuid(), name: trimmed }]
         };
       }
       return r;
@@ -230,6 +256,17 @@ function App() {
       }
       return r;
     }));
+    // Propaga o novo nome nas partidas do racha para manter as estatísticas consistentes
+    setMatches(prev => prev.map(m => {
+      if (m.rachaId !== activeRachaId) return m;
+      return {
+        ...m,
+        teams: m.teams.map(t => ({
+          ...t,
+          players: t.players.map(p => p.id === editingPlayerId ? { ...p, name } : p),
+        })),
+      };
+    }));
     setPlayerError('');
   };
 
@@ -246,17 +283,9 @@ function App() {
   };
 
   const copyTeams = async () => {
-    const lines = [`Sorteio - ${activeRacha.name}`];
-    drawResult.teams.forEach((team, i) => {
-      lines.push(`\nTime ${i + 1} (${team.length}):`);
-      team.forEach(p => lines.push(`- ${p.name}${priorityPlayerIds.includes(p.id) ? ' *' : ''}`));
-    });
-    if (drawResult.bench.length > 0) {
-      lines.push(`\nReserva (${drawResult.bench.length}):`);
-      drawResult.bench.forEach(p => lines.push(`- ${p.name}`));
-    }
+    const text = buildTeamsText(activeRacha.name, drawResult.teams, drawResult.bench, priorityPlayerIds);
     try {
-      await navigator.clipboard.writeText(lines.join('\n'));
+      await navigator.clipboard.writeText(text);
       showToast('Times copiados!');
     } catch {
       showToast('Não foi possível copiar os times.');
@@ -285,8 +314,14 @@ function App() {
   };
 
   const addGuest = () => {
-    if (!newGuestName.trim()) return;
-    const guest = { id: crypto.randomUUID(), name: newGuestName.trim(), isGuest: true };
+    const name = newGuestName.trim();
+    if (!name) return;
+    const exists = [...guests, ...activeRacha.players].some(p => p.name.toLowerCase() === name.toLowerCase());
+    if (exists) {
+      showToast('Esse nome já está presente.');
+      return;
+    }
+    const guest = { id: uuid(), name, isGuest: true };
     setGuests([...guests, guest]);
     setNewGuestName('');
   };
@@ -297,7 +332,7 @@ function App() {
   };
 
   const promoteGuest = (guest) => {
-    const name = guest.name.replace(/\s*\(C\)$/, '').trim();
+    const name = stripCaptainMark(guest.name);
     if (addPlayer(name)) {
       setGuests(prev => prev.filter(g => g.id !== guest.id));
       setPriorityPlayerIds(prev => prev.filter(id => id !== guest.id));
@@ -306,14 +341,7 @@ function App() {
   };
 
   const importPlayers = () => {
-    const names = importText
-      .split('\n')
-      .map(line => line
-        .replace(/^\s*[-*•·]?\s*/, '')
-        .replace(/^\d+[.)\-–]?\s*/, '')
-        .trim()
-      )
-      .filter(Boolean);
+    const names = parsePresenceNames(importText).map(stripCaptainMark);
 
     if (names.length === 0) {
       showToast('Nenhum nome reconhecido na lista.');
@@ -339,7 +367,7 @@ function App() {
           matched++;
         }
       } else if (!guestNames.has(name.toLowerCase())) {
-        nextGuests.push({ id: crypto.randomUUID(), name, isGuest: true });
+        nextGuests.push({ id: uuid(), name, isGuest: true });
         guestNames.add(name.toLowerCase());
         addedAsGuest++;
       }
@@ -354,15 +382,18 @@ function App() {
 
   const startMatch = () => {
     if (!drawResult || drawResult.teams.length === 0) return;
+    if (activeMatch && !window.confirm('Já existe um placar em andamento. Encerrar e iniciar um novo?')) {
+      return;
+    }
     const match = {
-      id: crypto.randomUUID(),
+      id: uuid(),
       rachaId: activeRachaId,
       createdAt: Date.now(),
       targetPoints: matchConfig.targetPoints,
       bestOf: matchConfig.bestOf,
       finished: false,
       teams: drawResult.teams.map((players, i) => ({
-        id: crypto.randomUUID(),
+        id: uuid(),
         name: `Time ${i + 1}`,
         players,
         points: 0,
@@ -413,9 +444,56 @@ function App() {
   };
 
   const deleteMatch = (matchId) => {
+    const index = matches.findIndex(m => m.id === matchId);
+    const match = matches[index];
+    if (!match) return;
     setMatches(prev => prev.filter(m => m.id !== matchId));
     setCurrentMatchId(null);
-    setView('detail');
+    setView('matches');
+    showToast('Partida excluída', 'Desfazer', () => {
+      setMatches(prev => {
+        if (prev.some(m => m.id === matchId)) return prev;
+        const next = [...prev];
+        next.splice(Math.min(index, next.length), 0, match);
+        return next;
+      });
+    });
+  };
+
+  const handleExport = () => {
+    try {
+      const blob = new Blob([serializeBackup({ rachas, matches })], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'volei-assist-backup.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Backup exportado!');
+    } catch {
+      showToast('Não foi possível exportar o backup.');
+    }
+  };
+
+  const handleImportFile = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const { rachas: importedRachas, matches: importedMatches } = parseBackup(reader.result);
+        setRachas(importedRachas);
+        setMatches(importedMatches);
+        setActiveRachaId(null);
+        setCurrentMatchId(null);
+        setView('list');
+        showToast('Dados importados com sucesso!');
+      } catch {
+        showToast('Arquivo de backup inválido.');
+      }
+      event.target.value = '';
+    };
+    reader.readAsText(file);
   };
 
   if (isLoading || isMatchesLoading) {
@@ -445,6 +523,8 @@ function App() {
           onOpenRacha={(racha) => { setActiveRachaId(racha.id); setView('detail'); }}
           darkMode={darkMode}
           onToggleTheme={() => setDarkMode(d => !d)}
+          onExport={handleExport}
+          onImportFile={handleImportFile}
         />
       )}
 
@@ -526,7 +606,7 @@ function App() {
         />
       )}
 
-      {view === 'matches' && (
+      {view === 'matches' && activeRacha && (
         <MatchHistory
           rachaName={activeRacha.name}
           matches={matchesForRacha}
@@ -536,7 +616,7 @@ function App() {
         />
       )}
 
-      {view === 'match' && currentMatch && (
+      {view === 'match' && currentMatch && activeRacha && (
         <Scoreboard
           rachaName={activeRacha.name}
           match={currentMatch}

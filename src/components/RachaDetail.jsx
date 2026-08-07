@@ -30,6 +30,7 @@ export default function RachaDetail({
           onClick={onToggleTheme}
           className="p-2 rounded-lg text-slate-500 hover:text-blue-600 transition-colors dark:text-slate-400"
           title={darkMode ? 'Modo claro' : 'Modo escuro'}
+          aria-label={darkMode ? 'Ativar modo claro' : 'Ativar modo escuro'}
         >
           {darkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>

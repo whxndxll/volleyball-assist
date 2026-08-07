@@ -50,6 +50,7 @@ export default function Scoreboard({
                   onClick={() => onAddPoint(team.id, -1)}
                   className="w-10 h-10 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-colors disabled:opacity-40 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
                   disabled={match.finished}
+                  aria-label={`Remover ponto - ${team.name}`}
                 >
                   <Minus size={18} />
                 </button>
@@ -57,6 +58,7 @@ export default function Scoreboard({
                   onClick={() => onAddPoint(team.id, 1)}
                   className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors disabled:opacity-40"
                   disabled={match.finished}
+                  aria-label={`Adicionar ponto - ${team.name}`}
                 >
                   <Plus size={18} />
                 </button>
@@ -68,6 +70,7 @@ export default function Scoreboard({
                     onClick={() => onAddSet(team.id, -1)}
                     className="w-7 h-7 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-colors disabled:opacity-40 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
                     disabled={match.finished}
+                    aria-label={`Remover set - ${team.name}`}
                   >
                     <Minus size={14} />
                   </button>
@@ -76,6 +79,7 @@ export default function Scoreboard({
                     onClick={() => onAddSet(team.id, 1)}
                     className="w-7 h-7 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-colors disabled:opacity-40 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
                     disabled={match.finished}
+                    aria-label={`Adicionar set - ${team.name}`}
                   >
                     <Plus size={14} />
                   </button>

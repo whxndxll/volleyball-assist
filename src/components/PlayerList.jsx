@@ -37,6 +37,7 @@ export default function PlayerList({
             <input
               type="text"
               placeholder="Nome do novo jogador..."
+              aria-label="Nome do novo jogador"
               className="flex-1 px-3 py-2 rounded-lg bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 focus:outline-none text-sm transition-all dark:bg-slate-700 dark:text-slate-100 dark:focus:bg-slate-600"
               value={newPlayerName}
               onChange={(e) => setNewPlayerName(e.target.value)}
@@ -65,6 +66,7 @@ export default function PlayerList({
                   onClick={() => onStartEditPlayer(player)}
                   className="font-medium flex items-center gap-2 hover:text-blue-600 transition-colors"
                   title="Renomear jogador"
+                  aria-label={`Renomear jogador ${player.name}`}
                 >
                   {player.name}
                   <Pencil size={14} className="text-slate-200 group-hover:text-blue-400 transition-colors dark:text-slate-600" />
@@ -74,6 +76,7 @@ export default function PlayerList({
                 onClick={() => onDeletePlayer(player.id)}
                 className="text-slate-300 hover:text-red-500 transition-all dark:text-slate-500"
                 title="Remover jogador"
+                aria-label={`Remover jogador ${player.name}`}
               >
                 <Trash2 size={16} />
               </button>

@@ -66,6 +66,7 @@ export default function MatchHistory({
                   onClick={() => onDeleteMatch(match.id)}
                   className="text-slate-300 hover:text-red-500 transition-colors dark:text-slate-500"
                   title="Excluir partida"
+                  aria-label={`Excluir partida ${match.teams.map((t, i) => `${i > 0 ? ' x ' : ''}${t.name} ${t.sets}`)}`}
                 >
                   <Trash2 size={16} />
                 </button>

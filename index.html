@@ -7,6 +7,15 @@
     <meta name="theme-color" content="#2563eb" />
     <meta name="description" content="Gerenciador de rachas de vôlei" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('va-theme');
+          var dark = t ? t === 'dark' : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
     <title>Vôlei Assist</title>
   </head>
   <body>

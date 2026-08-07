@@ -1,4 +1,4 @@
-import { Plus, Users, Trash2, ChevronRight, Pencil, Sun, Moon } from 'lucide-react';
+import { Plus, Users, Trash2, ChevronRight, Pencil, Sun, Moon, Download, Upload } from 'lucide-react';
 
 export default function RachaList({
   rachas,
@@ -16,6 +16,8 @@ export default function RachaList({
   onOpenRacha,
   darkMode,
   onToggleTheme,
+  onExport,
+  onImportFile,
 }) {
   return (
     <>
@@ -29,6 +31,7 @@ export default function RachaList({
             onClick={onToggleTheme}
             className="p-2 rounded-lg text-slate-500 hover:text-blue-600 transition-colors dark:text-slate-400"
             title={darkMode ? 'Modo claro' : 'Modo escuro'}
+            aria-label={darkMode ? 'Ativar modo claro' : 'Ativar modo escuro'}
           >
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
@@ -41,6 +44,7 @@ export default function RachaList({
             <input
               type="text"
               placeholder="Nome do novo racha..."
+              aria-label="Nome do novo racha"
               className="flex-1 px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
               value={newRachaName}
               onChange={(e) => setNewRachaName(e.target.value)}
@@ -50,6 +54,7 @@ export default function RachaList({
               onClick={onAddRacha}
               className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors"
               title="Criar racha"
+              aria-label="Criar racha"
             >
               <Plus size={24} />
             </button>
@@ -62,6 +67,14 @@ export default function RachaList({
             <div
               key={racha.id}
               onClick={() => onOpenRacha(racha)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onOpenRacha(racha);
+                }
+              }}
+              role="button"
+              tabIndex={0}
               className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between cursor-pointer hover:border-blue-200 transition-all group dark:bg-slate-800 dark:border-slate-700 dark:hover:border-blue-500"
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -78,6 +91,7 @@ export default function RachaList({
                       if (e.key === 'Escape') onCancelEditRacha();
                     }}
                     onBlur={onSaveRachaName}
+                    aria-label="Renomear racha"
                     className="flex-1 px-2 py-1 rounded-md border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm dark:bg-slate-700 dark:border-blue-500 dark:text-slate-100"
                   />
                 ) : (
@@ -92,6 +106,7 @@ export default function RachaList({
                   onClick={(e) => { e.stopPropagation(); onStartEditRacha(racha); }}
                   className="p-2 text-slate-300 hover:text-blue-500 transition-colors dark:text-slate-500"
                   title="Renomear racha"
+                  aria-label={`Renomear racha ${racha.name}`}
                 >
                   <Pencil size={16} />
                 </button>
@@ -99,6 +114,7 @@ export default function RachaList({
                   onClick={(e) => { e.stopPropagation(); onDeleteRacha(racha); }}
                   className="p-2 text-slate-300 hover:text-red-500 transition-colors dark:text-slate-500"
                   title="Excluir racha"
+                  aria-label={`Excluir racha ${racha.name}`}
                 >
                   <Trash2 size={18} />
                 </button>
@@ -112,6 +128,22 @@ export default function RachaList({
               <p className="text-sm">Crie um no campo acima!</p>
             </div>
           )}
+        </div>
+
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+          <p className="text-xs text-slate-400 mb-3 dark:text-slate-500">Backup: exporte ou restaure seus dados.</p>
+          <div className="flex gap-2">
+            <button
+              onClick={onExport}
+              className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-semibold hover:border-blue-200 hover:text-blue-600 transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+            >
+              <Download size={16} /> Exportar
+            </button>
+            <label className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-semibold cursor-pointer hover:border-blue-200 hover:text-blue-600 transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+              <Upload size={16} /> Importar
+              <input type="file" accept="application/json,.json" className="hidden" onChange={onImportFile} />
+            </label>
+          </div>
         </div>
       </div>
     </>

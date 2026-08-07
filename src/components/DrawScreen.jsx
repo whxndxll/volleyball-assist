@@ -256,6 +256,16 @@ export default function DrawScreen({
                   <div
                     key={player.id}
                     onClick={() => onToggleSelection(player.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onToggleSelection(player.id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    aria-label={`${isSelected ? 'Remover' : 'Selecionar'} ${player.name}`}
                     className={cn(
                       'flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer',
                       isSelected
@@ -282,6 +292,7 @@ export default function DrawScreen({
                         isPriority ? 'text-yellow-500' : 'text-slate-300 hover:text-yellow-400 dark:text-slate-500'
                       )}
                       title="Prioridade: vai para os Times 1 e 2"
+                      aria-label={`${isPriority ? 'Remover prioridade' : 'Priorizar'} ${player.name}`}
                     >
                       <Star size={20} className={isPriority ? 'fill-yellow-500' : ''} />
                     </button>
@@ -297,6 +308,7 @@ export default function DrawScreen({
               <input
                 type="text"
                 placeholder="Nome do convidado..."
+                aria-label="Nome do convidado"
                 className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                 value={newGuestName}
                 onChange={(e) => setNewGuestName(e.target.value)}
