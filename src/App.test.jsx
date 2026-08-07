@@ -9,6 +9,12 @@ const rachaWithPlayers = (players) => ({
   players: players.map((name, i) => ({ id: `p${i}`, name })),
 });
 
+beforeEach(async () => {
+  sessionStorage.clear();
+  localStorage.clear();
+  await localforage.clear();
+});
+
 describe('App - delete racha undo', () => {
   it('restores the deleted racha exactly once after undo', async () => {
     const user = userEvent.setup();
@@ -67,46 +73,8 @@ describe('App - match configuration', () => {
     await user.click(screen.getByRole('button', { name: 'Bo1' }));
     await user.click(screen.getByRole('button', { name: 'Iniciar Placar' }));
 
-    expect(await screen.findByText('Jogo até 21 pontos · melhor de 1 (1 sets para vencer)')).toBeInTheDocument();
-  });
-});
-
-describe('App - statistics', () => {
-  it('shows stats per player from finished matches', async () => {
-    const p0 = { id: 'a', name: 'Ana' };
-    const p1 = { id: 'b', name: 'Bia' };
-    const p2 = { id: 'c', name: 'Carla' };
-    const p3 = { id: 'd', name: 'Duda' };
-    await localforage.setItem('rachas', [{ id: 'r1', name: 'Racha Teste', players: [p0, p1, p2, p3] }]);
-    await localforage.setItem('matches', [
-      {
-        id: 'm1',
-        rachaId: 'r1',
-        createdAt: 1,
-        targetPoints: 25,
-        bestOf: 3,
-        finished: true,
-        teams: [
-          { id: 't1', name: 'Time 1', players: [p0, p1], points: 25, sets: 2 },
-          { id: 't2', name: 'Time 2', players: [p2, p3], points: 20, sets: 0 },
-        ],
-      },
-    ]);
-
-    const user = userEvent.setup();
-    render(<App />);
-
-    await user.click(await screen.findByText('Racha Teste'));
-    await user.click(screen.getByRole('button', { name: /Estatísticas/ }));
-
-    expect(await screen.findByText('Estatísticas')).toBeInTheDocument();
-    expect(within(screen.getByText('Partidas').closest('div')).getByText('1')).toBeInTheDocument();
-    expect(within(screen.getByText('Sets jogados').closest('div')).getByText('2')).toBeInTheDocument();
-    expect(within(screen.getByText('Jogadores').closest('div')).getByText('4')).toBeInTheDocument();
-    expect(screen.getAllByText('100%')).toHaveLength(2);
-    expect(screen.getAllByText('0%')).toHaveLength(2);
-    expect(screen.getByText('Ana')).toBeInTheDocument();
-    expect(screen.getByText('Duda')).toBeInTheDocument();
+    expect(await screen.findByText('Melhor de 1')).toBeInTheDocument();
+    expect(screen.getByText('até 21 pts')).toBeInTheDocument();
   });
 });
 

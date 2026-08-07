@@ -63,4 +63,37 @@ describe('drawTeams', () => {
       expect(firstTwoTeams).toContain(id);
     }
   });
+
+  it('keeps bench-marked players on the bench when they cannot complete an extra team', () => {
+    const benchPlayerIds = ['M', 'N', 'O', 'P'];
+    const result = drawTeams({ players: allPlayers.slice(0, 16), playersPerTeam: 6, numTeams: 2, benchPlayerIds });
+    expect(result.teams).toHaveLength(2);
+    const inTeams = result.teams.flat().map(p => p.id);
+    for (const id of benchPlayerIds) {
+      expect(inTeams).not.toContain(id);
+      expect(result.bench.map(p => p.id)).toContain(id);
+    }
+  });
+
+  it('uses bench-marked players to complete the last team when a full team fits', () => {
+    const eighteenPlayers = Array.from({ length: 18 }, (_, i) => player(String.fromCharCode(65 + i)));
+    const regular = eighteenPlayers.slice(0, 12);
+    const marked = eighteenPlayers.slice(12, 18);
+    const players = [...regular, ...marked];
+    const benchPlayerIds = marked.map(p => p.id);
+    const result = drawTeams({ players, playersPerTeam: 6, numTeams: 3, benchPlayerIds });
+    expect(result.teams).toHaveLength(3);
+    expect(result.teams.every(t => t.length === 6)).toBe(true);
+    expect(result.bench).toHaveLength(0);
+    expect(result.teams[2].map(p => p.id).sort()).toEqual(marked.map(p => p.id).sort());
+  });
+
+  it('never puts bench-marked players ahead of priority or regular players', () => {
+    const benchPlayerIds = ['M', 'N', 'O', 'P', 'Q', 'R'];
+    const result = drawTeams({ players: allPlayers.slice(0, 18), playersPerTeam: 6, numTeams: 3, benchPlayerIds });
+    const firstTwo = [...result.teams[0], ...result.teams[1]].map(p => p.id);
+    for (const id of benchPlayerIds) {
+      expect(firstTwo).not.toContain(id);
+    }
+  });
 });

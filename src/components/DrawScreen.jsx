@@ -1,4 +1,4 @@
-import { ArrowLeft, Settings, Plus, Star, UserPlus, UserCheck, RefreshCw, Copy, Play } from 'lucide-react';
+import { ArrowLeft, Settings, Plus, Star, UserPlus, UserCheck, RefreshCw, Copy, Play, Clock } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { TEAM_COLORS } from '../lib/match';
 
@@ -8,6 +8,7 @@ export default function DrawScreen({
   setConfig,
   selectedPlayerIds,
   priorityPlayerIds,
+  benchPlayerIds,
   guests,
   newGuestName,
   setNewGuestName,
@@ -18,6 +19,7 @@ export default function DrawScreen({
   setImportText,
   onToggleSelection,
   onTogglePriority,
+  onToggleBench,
   onSelectAllMembers,
   onClearMembers,
   onAddGuest,
@@ -38,6 +40,10 @@ export default function DrawScreen({
   matchConfig,
   setMatchConfig,
 }) {
+  const BenchMark = ({ player, className = '' }) =>
+    benchPlayerIds.includes(player.id) ? (
+      <Clock size={14} className={cn('text-slate-400 dark:text-slate-500', className)} />
+    ) : null;
   return (
     <div className="p-4 pb-32">
       <button
@@ -82,6 +88,7 @@ export default function DrawScreen({
                         <span className={cn('w-2 h-2 rounded-full', color.dot, color.darkDot)} />
                         {p.name}
                         {priorityPlayerIds.includes(p.id) && <Star size={14} className="fill-yellow-400 text-yellow-400" />}
+                        <BenchMark player={p} />
                       </li>
                     ))}
                   </ul>
@@ -96,7 +103,10 @@ export default function DrawScreen({
                 </h3>
                 <ul className="space-y-1 text-slate-500 dark:text-slate-400">
                   {drawResult.bench.map(p => (
-                    <li key={p.id}>{p.name}</li>
+                    <li key={p.id} className="flex items-center gap-2">
+                      {p.name}
+                      <BenchMark player={p} />
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -245,13 +255,14 @@ export default function DrawScreen({
                 : `faltam ${shortForTwoTeams} para 2 times completos`}
             </p>
             <p className="text-xs text-slate-400 mb-3 dark:text-slate-500">
-              Toque na estrela para priorizar — priorizados vão para os Times 1 e 2.
+              Estrela prioriza (Times 1 e 2). Relógio marca reserva — confirmou presença mas ainda não chegou.
             </p>
 
             <div className="space-y-2 max-h-60 overflow-y-auto p-1">
               {racha.players.map(player => {
                 const isSelected = selectedPlayerIds.includes(player.id);
                 const isPriority = priorityPlayerIds.includes(player.id);
+                const isBench = benchPlayerIds.includes(player.id);
                 return (
                   <div
                     key={player.id}
@@ -295,6 +306,17 @@ export default function DrawScreen({
                       aria-label={`${isPriority ? 'Remover prioridade' : 'Priorizar'} ${player.name}`}
                     >
                       <Star size={20} className={isPriority ? 'fill-yellow-500' : ''} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggleBench(player.id); }}
+                      className={cn(
+                        'p-1 rounded-full transition-colors',
+                        isBench ? 'text-slate-600 dark:text-slate-300' : 'text-slate-300 hover:text-slate-500 dark:text-slate-500'
+                      )}
+                      title="Reserva: confirmou presença mas ainda não chegou"
+                      aria-label={`${isBench ? 'Remover' : 'Marcar'} ${player.name} como reserva`}
+                    >
+                      <Clock size={20} className={isBench ? 'fill-slate-300 dark:fill-slate-600' : ''} />
                     </button>
                   </div>
                 );
@@ -342,8 +364,19 @@ export default function DrawScreen({
                       priorityPlayerIds.includes(guest.id) ? 'text-yellow-600' : 'text-slate-400'
                     )}
                     title="Prioridade: vai para os Times 1 e 2"
+                    aria-label={`${priorityPlayerIds.includes(guest.id) ? 'Remover prioridade' : 'Priorizar'} ${guest.name}`}
                   >
                     <Star size={14} className={priorityPlayerIds.includes(guest.id) ? 'fill-yellow-600' : ''} />
+                  </button>
+                  <button
+                    onClick={() => onToggleBench(guest.id)}
+                    className={cn(
+                      benchPlayerIds.includes(guest.id) ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400'
+                    )}
+                    title="Reserva: confirmou presença mas ainda não chegou"
+                    aria-label={`${benchPlayerIds.includes(guest.id) ? 'Remover' : 'Marcar'} ${guest.name} como reserva`}
+                  >
+                    <Clock size={14} className={benchPlayerIds.includes(guest.id) ? 'fill-slate-300 dark:fill-slate-600' : ''} />
                   </button>
                   <button
                     onClick={() => onRemoveGuest(guest.id)}

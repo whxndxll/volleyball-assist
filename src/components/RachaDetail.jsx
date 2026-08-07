@@ -1,13 +1,11 @@
-import { ArrowLeft, Users, Trophy, Sun, Moon, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Users, Sun, Moon, Dices, Play } from 'lucide-react';
 
 export default function RachaDetail({
   racha,
   activeMatch,
-  matchesCount,
   onBack,
   onPlayers,
-  onMatches,
-  onStats,
+  onPlacar,
   onNewDraw,
   darkMode,
   onToggleTheme,
@@ -37,6 +35,30 @@ export default function RachaDetail({
       </header>
 
       <div className="grid gap-4">
+        {activeMatch && (
+          <button
+            onClick={onPlacar}
+            className="bg-emerald-600 p-6 rounded-2xl shadow-lg shadow-emerald-200 flex flex-col gap-3 items-start text-left hover:bg-emerald-700 transition-all dark:shadow-none dark:bg-emerald-700 dark:hover:bg-emerald-600"
+          >
+            <div className="bg-white/20 p-3 rounded-xl text-white">
+              <Play size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-white flex items-center gap-2">
+                Placar em andamento
+                {!activeMatch.finished && (
+                  <span className="text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full animate-pulse">
+                    AO VIVO
+                  </span>
+                )}
+              </h3>
+              <p className="text-sm text-emerald-50">
+                {activeMatch.teams.map(t => `${t.name} ${t.sets}`).join(' · ')}
+              </p>
+            </div>
+          </button>
+        )}
+
         <button
           onClick={onPlayers}
           className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3 items-start hover:border-blue-200 transition-all dark:bg-slate-800 dark:border-slate-700 dark:hover:border-blue-500"
@@ -46,39 +68,7 @@ export default function RachaDetail({
           </div>
           <div className="text-left">
             <h3 className="font-bold text-lg">Jogadores</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Gerencie a lista de membros fixos do racha ({racha.players.length})</p>
-          </div>
-        </button>
-
-        <button
-          onClick={onMatches}
-          className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3 items-start hover:border-emerald-200 transition-all dark:bg-slate-800 dark:border-slate-700 dark:hover:border-emerald-500"
-        >
-          <div className="bg-emerald-100 p-3 rounded-xl text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300">
-            <Trophy size={24} />
-          </div>
-          <div className="text-left">
-            <h3 className="font-bold text-lg">Partidas</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {activeMatch
-                ? 'Placar em andamento'
-                : matchesCount > 0
-                  ? `${matchesCount} partida(s) registrada(s)`
-                  : 'Placares e histórico'}
-            </p>
-          </div>
-        </button>
-
-        <button
-          onClick={onStats}
-          className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3 items-start hover:border-purple-200 transition-all dark:bg-slate-800 dark:border-slate-700 dark:hover:border-purple-500"
-        >
-          <div className="bg-purple-100 p-3 rounded-xl text-purple-600 dark:bg-purple-900/40 dark:text-purple-300">
-            <BarChart3 size={24} />
-          </div>
-          <div className="text-left">
-            <h3 className="font-bold text-lg">Estatísticas</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Partidas, vitórias e aproveitamento por jogador.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Lista de presença fixa do racha ({racha.players.length})</p>
           </div>
         </button>
 
@@ -87,11 +77,11 @@ export default function RachaDetail({
           className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3 items-start hover:border-orange-200 transition-all dark:bg-slate-800 dark:border-slate-700 dark:hover:border-orange-500"
         >
           <div className="bg-orange-100 p-3 rounded-xl text-orange-600 dark:bg-orange-900/40 dark:text-orange-300">
-            <Trophy size={24} />
+            <Dices size={24} />
           </div>
           <div className="text-left">
             <h3 className="font-bold text-lg">Novo Sorteio</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Inicie uma partida sorteando os times com quem está presente.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Sorteie os times com quem está presente hoje.</p>
           </div>
         </button>
       </div>

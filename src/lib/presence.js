@@ -13,11 +13,17 @@ export function stripCaptainMark(name) {
   return name.replace(/\s*\(C\)$/, '').trim();
 }
 
-export function buildTeamsText(rachaName, teams, bench, priorityIds) {
+const withMarker = (name, id, markedIds, marker) =>
+  markedIds.includes(id) ? `${name}${marker}` : name;
+
+export function buildTeamsText(rachaName, teams, bench, priorityIds = [], benchIds = []) {
   const lines = [`Sorteio - ${rachaName}`];
   teams.forEach((team, i) => {
     lines.push(`\nTime ${i + 1} (${team.length}):`);
-    team.forEach(p => lines.push(`- ${p.name}${priorityIds.includes(p.id) ? ' *' : ''}`));
+    team.forEach(p => {
+      const name = withMarker(p.name, p.id, priorityIds, ' *');
+      lines.push(`- ${withMarker(name, p.id, benchIds, ' (reserva)')}`);
+    });
   });
   if (bench.length > 0) {
     lines.push(`\nReserva (${bench.length}):`);

@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { drawTeams } from './utils/teamLogic';
 import { setsToWin } from './lib/match';
-import { computePlayerStats } from './lib/stats';
 import { uuid } from './lib/id';
 import { parsePresenceNames, stripCaptainMark, buildTeamsText } from './lib/presence';
 import { serializeBackup, parseBackup } from './lib/backup';
@@ -12,9 +11,7 @@ import RachaList from './components/RachaList';
 import RachaDetail from './components/RachaDetail';
 import PlayerList from './components/PlayerList';
 import DrawScreen from './components/DrawScreen';
-import MatchHistory from './components/MatchHistory';
 import Scoreboard from './components/Scoreboard';
-import StatsScreen from './components/StatsScreen';
 
 const readSession = (key) => {
   try {
@@ -36,7 +33,7 @@ const saveSession = (key, value) => {
 function App() {
   const [rachas, setRachas, isLoading] = useLocalStorage('rachas', []);
   const [activeRachaId, setActiveRachaId] = useState(() => readSession('va-active-racha'));
-  const [view, setView] = useState(() => readSession('va-view') || 'list'); // list, detail, players, draw, matches, match, stats
+  const [view, setView] = useState(() => readSession('va-view') || 'list'); // list, detail, players, draw, match
   const [newRachaName, setNewRachaName] = useState('');
   const [newPlayerName, setNewPlayerName] = useState('');
   const [rachaError, setRachaError] = useState('');
@@ -49,6 +46,7 @@ function App() {
   // State for drawing
   const [selectedPlayerIds, setSelectedPlayerIds] = useState([]);
   const [priorityPlayerIds, setPriorityPlayerIds] = useState([]);
+  const [benchPlayerIds, setBenchPlayerIds] = useState([]);
   const [guests, setGuests] = useState([]);
   const [newGuestName, setNewGuestName] = useState('');
   const [config, setConfig] = useState({ playersPerTeam: 6, numTeams: 2 });
@@ -58,9 +56,8 @@ function App() {
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState('');
 
-  // State for scoreboard
-  const [matches, setMatches, isMatchesLoading] = useLocalStorage('matches', []);
-  const [currentMatchId, setCurrentMatchId] = useState(() => readSession('va-current-match'));
+  // Placar: partida única e efêmera (sobrevive ao refresh, mas não vira histórico)
+  const [match, setMatch, isMatchLoading] = useLocalStorage('activeMatch', null);
   const [matchConfig, setMatchConfig] = useState({ targetPoints: 25, bestOf: 3 });
 
   // State for theme
@@ -76,7 +73,6 @@ function App() {
   // Persist navigation across refresh
   useEffect(() => { saveSession('va-view', view); }, [view]);
   useEffect(() => { saveSession('va-active-racha', activeRachaId); }, [activeRachaId]);
-  useEffect(() => { saveSession('va-current-match', currentMatchId); }, [currentMatchId]);
 
   const { toast, showToast, dismissToast } = useToast();
 
@@ -92,36 +88,19 @@ function App() {
   const canDraw = fullTeams >= 2;
   const shortForTwoTeams = Math.max(0, 2 * playersPerTeam - totalSelected);
 
-  const activeMatch = useMemo(() =>
-    matches.find(m => m.rachaId === activeRachaId && !m.finished),
-    [matches, activeRachaId]
-  );
-
-  const matchesForRacha = useMemo(() =>
-    matches.filter(m => m.rachaId === activeRachaId).sort((a, b) => b.createdAt - a.createdAt),
-    [matches, activeRachaId]
-  );
-
-  const playerStats = useMemo(() => computePlayerStats(matchesForRacha), [matchesForRacha]);
-
-  const currentMatch = useMemo(() =>
-    matches.find(m => m.id === currentMatchId) || activeMatch,
-    [matches, currentMatchId, activeMatch]
-  );
-
-  const currentMatchWinner = currentMatch
-    ? currentMatch.teams.find(t => t.sets >= setsToWin(currentMatch)) || null
+  const matchWinner = match
+    ? match.teams.find(t => t.sets >= setsToWin(match)) || null
     : null;
 
   // Se a navegação restaurada aponta para dados que não existem (ex.: racha deletado), volta para a lista
   useEffect(() => {
-    if (isLoading || isMatchesLoading) return;
+    if (isLoading || isMatchLoading) return;
     if (view !== 'list' && !activeRacha) {
       setView('list');
-    } else if (view === 'match' && !currentMatch) {
-      setView('matches');
+    } else if (view === 'match' && !match) {
+      setView('detail');
     }
-  }, [isLoading, isMatchesLoading, view, activeRacha, currentMatch]);
+  }, [isLoading, isMatchLoading, view, activeRacha, match]);
 
   const addRacha = () => {
     const name = newRachaName.trim();
@@ -142,32 +121,18 @@ function App() {
 
   const deleteRacha = (racha) => {
     const index = rachas.findIndex(r => r.id === racha.id);
-    const rachaMatches = matches
-      .map((m, i) => (m.rachaId === racha.id ? { match: m, index: i } : null))
-      .filter(Boolean);
+    const deletedMatch = match && match.rachaId === racha.id ? match : null;
     setRachas(prev => prev.filter(r => r.id !== racha.id));
-    setMatches(prev => prev.filter(m => m.rachaId !== racha.id));
+    if (deletedMatch) setMatch(null);
     if (activeRachaId === racha.id) {
       setActiveRachaId(null);
       setView('list');
-    }
-    if (currentMatchId && rachaMatches.some(({ match }) => match.id === currentMatchId)) {
-      setCurrentMatchId(null);
     }
     showToast('Racha excluído', 'Desfazer', () => {
       setRachas(prev => {
         if (prev.some(r => r.id === racha.id)) return prev;
         const next = [...prev];
         next.splice(Math.min(index, next.length), 0, racha);
-        return next;
-      });
-      setMatches(prev => {
-        if (rachaMatches.length === 0) return prev;
-        const next = [...prev];
-        rachaMatches.forEach(({ match, index: matchIndex }) => {
-          if (next.some(m => m.id === match.id)) return;
-          next.splice(Math.min(matchIndex, next.length), 0, match);
-        });
         return next;
       });
     });
@@ -256,17 +221,6 @@ function App() {
       }
       return r;
     }));
-    // Propaga o novo nome nas partidas do racha para manter as estatísticas consistentes
-    setMatches(prev => prev.map(m => {
-      if (m.rachaId !== activeRachaId) return m;
-      return {
-        ...m,
-        teams: m.teams.map(t => ({
-          ...t,
-          players: t.players.map(p => p.id === editingPlayerId ? { ...p, name } : p),
-        })),
-      };
-    }));
     setPlayerError('');
   };
 
@@ -277,13 +231,20 @@ function App() {
       players: allPlayers,
       playersPerTeam,
       numTeams: maxTeams,
-      priorityPlayerIds
+      priorityPlayerIds,
+      benchPlayerIds
     });
     setDrawResult(result);
   };
 
   const copyTeams = async () => {
-    const text = buildTeamsText(activeRacha.name, drawResult.teams, drawResult.bench, priorityPlayerIds);
+    const text = buildTeamsText(
+      activeRacha.name,
+      drawResult.teams,
+      drawResult.bench,
+      priorityPlayerIds,
+      benchPlayerIds
+    );
     try {
       await navigator.clipboard.writeText(text);
       showToast('Times copiados!');
@@ -302,6 +263,14 @@ function App() {
     setPriorityPlayerIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
+    setBenchPlayerIds(prev => prev.filter(i => i !== id));
+  };
+
+  const toggleBench = (id) => {
+    setBenchPlayerIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+    setPriorityPlayerIds(prev => prev.filter(i => i !== id));
   };
 
   const selectAllMembers = () => {
@@ -311,6 +280,7 @@ function App() {
   const clearMembers = () => {
     setSelectedPlayerIds([]);
     setPriorityPlayerIds(prev => prev.filter(id => !activeRacha.players.some(p => p.id === id)));
+    setBenchPlayerIds(prev => prev.filter(id => !activeRacha.players.some(p => p.id === id)));
   };
 
   const addGuest = () => {
@@ -329,6 +299,7 @@ function App() {
   const removeGuest = (guestId) => {
     setGuests(guests.filter(g => g.id !== guestId));
     setPriorityPlayerIds(priorityPlayerIds.filter(id => id !== guestId));
+    setBenchPlayerIds(benchPlayerIds.filter(id => id !== guestId));
   };
 
   const promoteGuest = (guest) => {
@@ -336,6 +307,7 @@ function App() {
     if (addPlayer(name)) {
       setGuests(prev => prev.filter(g => g.id !== guest.id));
       setPriorityPlayerIds(prev => prev.filter(id => id !== guest.id));
+      setBenchPlayerIds(prev => prev.filter(id => id !== guest.id));
       showToast(`${name} adicionado à lista do racha`);
     }
   };
@@ -382,13 +354,12 @@ function App() {
 
   const startMatch = () => {
     if (!drawResult || drawResult.teams.length === 0) return;
-    if (activeMatch && !window.confirm('Já existe um placar em andamento. Encerrar e iniciar um novo?')) {
+    if (match && !match.finished && !window.confirm('Já existe um placar em andamento. Encerrar e iniciar um novo?')) {
       return;
     }
-    const match = {
+    const newMatch = {
       id: uuid(),
       rachaId: activeRachaId,
-      createdAt: Date.now(),
       targetPoints: matchConfig.targetPoints,
       bestOf: matchConfig.bestOf,
       finished: false,
@@ -400,69 +371,61 @@ function App() {
         sets: 0,
       })),
     };
-    setMatches(prev => [
-      match,
-      ...prev.map(m => m.rachaId === activeRachaId ? { ...m, finished: true } : m),
-    ]);
-    setCurrentMatchId(match.id);
+    setMatch(newMatch);
     setDrawResult(null);
     setView('match');
   };
 
-  const updateMatch = (matchId, updater) => {
-    setMatches(prev => prev.map(m => m.id === matchId ? updater(m) : m));
+  const addPoint = (teamId) => {
+    setMatch(prev => {
+      if (!prev || prev.finished) return prev;
+      const teams = prev.teams.map(t =>
+        t.id === teamId ? { ...t, points: t.points + 1 } : t
+      );
+      const leader = teams.find(t =>
+        t.points >= prev.targetPoints && Math.abs(teams[0].points - teams[1].points) >= 2
+      );
+      if (leader) {
+        const nextTeams = teams.map(t => ({ ...t, points: 0, sets: t.id === leader.id ? t.sets + 1 : t.sets }));
+        const finished = nextTeams.some(t => t.sets >= setsToWin(prev));
+        return { ...prev, teams: nextTeams, finished };
+      }
+      return { ...prev, teams };
+    });
   };
 
-  const addPoint = (matchId, teamId, delta) => {
-    updateMatch(matchId, m => {
-      if (m.finished) return m;
+  const removePoint = (teamId) => {
+    setMatch(prev => {
+      if (!prev || prev.finished) return prev;
       return {
-        ...m,
-        teams: m.teams.map(t => t.id === teamId ? { ...t, points: Math.max(0, t.points + delta) } : t),
+        ...prev,
+        teams: prev.teams.map(t =>
+          t.id === teamId ? { ...t, points: Math.max(0, t.points - 1) } : t
+        ),
       };
     });
   };
 
-  const addSet = (matchId, teamId, delta) => {
-    updateMatch(matchId, m => {
-      const teams = m.teams.map(t => t.id === teamId ? { ...t, sets: Math.max(0, t.sets + delta) } : t);
-      const winner = teams.find(t => t.sets >= setsToWin(m));
-      return { ...m, teams, finished: m.finished || Boolean(winner) };
-    });
+  const finishMatch = () => {
+    setMatch(prev => (prev ? { ...prev, finished: true } : prev));
   };
 
-  const finishMatch = (matchId) => {
-    updateMatch(matchId, m => ({ ...m, finished: true }));
-  };
-
-  const resetMatch = (matchId) => {
-    updateMatch(matchId, m => ({
-      ...m,
+  const resetMatch = () => {
+    setMatch(prev => (prev ? {
+      ...prev,
       finished: false,
-      teams: m.teams.map(t => ({ ...t, points: 0, sets: 0 })),
-    }));
+      teams: prev.teams.map(t => ({ ...t, points: 0, sets: 0 })),
+    } : prev));
   };
 
-  const deleteMatch = (matchId) => {
-    const index = matches.findIndex(m => m.id === matchId);
-    const match = matches[index];
-    if (!match) return;
-    setMatches(prev => prev.filter(m => m.id !== matchId));
-    setCurrentMatchId(null);
-    setView('matches');
-    showToast('Partida excluída', 'Desfazer', () => {
-      setMatches(prev => {
-        if (prev.some(m => m.id === matchId)) return prev;
-        const next = [...prev];
-        next.splice(Math.min(index, next.length), 0, match);
-        return next;
-      });
-    });
+  const finalizeMatch = () => {
+    setMatch(null);
+    setView('detail');
   };
 
   const handleExport = () => {
     try {
-      const blob = new Blob([serializeBackup({ rachas, matches })], { type: 'application/json' });
+      const blob = new Blob([serializeBackup({ rachas })], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -481,11 +444,10 @@ function App() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const { rachas: importedRachas, matches: importedMatches } = parseBackup(reader.result);
+        const { rachas: importedRachas } = parseBackup(reader.result);
         setRachas(importedRachas);
-        setMatches(importedMatches);
+        setMatch(null);
         setActiveRachaId(null);
-        setCurrentMatchId(null);
         setView('list');
         showToast('Dados importados com sucesso!');
       } catch {
@@ -496,7 +458,7 @@ function App() {
     reader.readAsText(file);
   };
 
-  if (isLoading || isMatchesLoading) {
+  if (isLoading || isMatchLoading) {
     return (
       <div className="max-w-md mx-auto p-4 min-h-screen flex items-center justify-center bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <p className="text-blue-600 font-medium">Carregando...</p>
@@ -531,15 +493,14 @@ function App() {
       {view === 'detail' && activeRacha && (
         <RachaDetail
           racha={activeRacha}
-          activeMatch={activeMatch}
-          matchesCount={matchesForRacha.length}
+          activeMatch={match}
           onBack={() => setView('list')}
           onPlayers={() => setView('players')}
-          onMatches={() => { setCurrentMatchId(null); setView('matches'); }}
-          onStats={() => setView('stats')}
+          onPlacar={() => setView('match')}
           onNewDraw={() => {
             setSelectedPlayerIds([]);
             setPriorityPlayerIds([]);
+            setBenchPlayerIds([]);
             setGuests([]);
             setDrawResult(null);
             setView('draw');
@@ -574,6 +535,7 @@ function App() {
           setConfig={setConfig}
           selectedPlayerIds={selectedPlayerIds}
           priorityPlayerIds={priorityPlayerIds}
+          benchPlayerIds={benchPlayerIds}
           guests={guests}
           newGuestName={newGuestName}
           setNewGuestName={setNewGuestName}
@@ -584,6 +546,7 @@ function App() {
           setImportText={setImportText}
           onToggleSelection={toggleSelection}
           onTogglePriority={togglePriority}
+          onToggleBench={toggleBench}
           onSelectAllMembers={selectAllMembers}
           onClearMembers={clearMembers}
           onAddGuest={addGuest}
@@ -606,33 +569,16 @@ function App() {
         />
       )}
 
-      {view === 'matches' && activeRacha && (
-        <MatchHistory
-          rachaName={activeRacha.name}
-          matches={matchesForRacha}
-          onOpenMatch={(match) => { setCurrentMatchId(match.id); setView('match'); }}
-          onDeleteMatch={deleteMatch}
-          onBack={() => setView('detail')}
-        />
-      )}
-
-      {view === 'match' && currentMatch && activeRacha && (
+      {view === 'match' && match && activeRacha && (
         <Scoreboard
           rachaName={activeRacha.name}
-          match={currentMatch}
-          winner={currentMatchWinner}
-          onAddPoint={(teamId, delta) => addPoint(currentMatch.id, teamId, delta)}
-          onAddSet={(teamId, delta) => addSet(currentMatch.id, teamId, delta)}
-          onFinishMatch={() => finishMatch(currentMatch.id)}
-          onResetMatch={() => resetMatch(currentMatch.id)}
-          onBack={() => { setCurrentMatchId(null); setView('matches'); }}
-        />
-      )}
-
-      {view === 'stats' && activeRacha && (
-        <StatsScreen
-          rachaName={activeRacha.name}
-          stats={playerStats}
+          match={match}
+          winner={matchWinner}
+          onAddPoint={(teamId) => addPoint(teamId)}
+          onRemovePoint={(teamId) => removePoint(teamId)}
+          onFinishMatch={finishMatch}
+          onResetMatch={resetMatch}
+          onFinalize={finalizeMatch}
           onBack={() => setView('detail')}
         />
       )}

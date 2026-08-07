@@ -1,6 +1,6 @@
-export function serializeBackup({ rachas, matches }) {
+export function serializeBackup({ rachas }) {
   return JSON.stringify(
-    { app: 'volei-assist', version: 1, exportedAt: Date.now(), rachas, matches },
+    { app: 'volei-assist', version: 2, exportedAt: Date.now(), rachas },
     null,
     2
   );
@@ -8,8 +8,8 @@ export function serializeBackup({ rachas, matches }) {
 
 export function parseBackup(text) {
   const data = JSON.parse(text);
-  if (!data || !Array.isArray(data.rachas) || !Array.isArray(data.matches)) {
+  if (!data || !Array.isArray(data.rachas)) {
     throw new Error('Formato de backup inválido');
   }
-  return { rachas: data.rachas, matches: data.matches };
+  return { rachas: data.rachas };
 }

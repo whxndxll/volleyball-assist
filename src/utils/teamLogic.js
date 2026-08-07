@@ -11,7 +11,8 @@ export function drawTeams({
   players,
   playersPerTeam,
   numTeams: requestedNumTeams,
-  priorityPlayerIds = []
+  priorityPlayerIds = [],
+  benchPlayerIds = []
 }) {
   const perTeam = Math.max(1, playersPerTeam);
   const maxTeams = Math.max(1, requestedNumTeams);
@@ -24,9 +25,12 @@ export function drawTeams({
     return { teams: [], bench: players };
   }
 
-  // Separa e embaralha para garantir aleatoriedade dentro das categorias
+  // Presentes formam os times 1 e 2 (prioridade primeiro); quem marcou "reserva"
+  // (confirmou presença mas ainda não chegou) completa as vagas restantes no último
+  // time — se der para formar um time completo — caso contrário fica na reserva.
   const priorityPlayers = shuffleArray(players.filter(p => priorityPlayerIds.includes(p.id)));
-  const regularPlayers = shuffleArray(players.filter(p => !priorityPlayerIds.includes(p.id)));
+  const regularPlayers = shuffleArray(players.filter(p => !priorityPlayerIds.includes(p.id) && !benchPlayerIds.includes(p.id)));
+  const benchMarkedPlayers = shuffleArray(players.filter(p => benchPlayerIds.includes(p.id)));
 
   const teams = Array.from({ length: numTeams }, () => []);
 
@@ -48,19 +52,26 @@ export function drawTeams({
     return playerList.slice(listIdx);
   };
 
-  // 1. Prioritários nos times 1 e 2 (se houver mais de 2 times) ou em todos (se houver apenas 2)
   const primaryTeamIndices = numTeams > 2 ? [0, 1] : Array.from({ length: numTeams }, (_, i) => i);
+  const otherTeamIndices = Array.from({ length: Math.max(0, numTeams - 2) }, (_, i) => i + 2);
+  const allTeamIndices = Array.from({ length: numTeams }, (_, i) => i);
+
+  // 1. Prioritários nos times 1 e 2 (ou em todos, se houver apenas 2)
   let remainingPriority = distributeToTeams(priorityPlayers, primaryTeamIndices);
 
-  // 2. Se ainda sobrar prioritários (porque os times 1 e 2 encheram), tenta colocar nos outros times
-  if (remainingPriority.length > 0 && numTeams > 2) {
-    const otherTeamIndices = Array.from({ length: numTeams - 2 }, (_, i) => i + 2);
+  // 2. Excedente de prioritários vai para os outros times
+  if (remainingPriority.length > 0 && otherTeamIndices.length > 0) {
     remainingPriority = distributeToTeams(remainingPriority, otherTeamIndices);
   }
 
-  // 3. Regulares (e prioritários que sobraram) preenchem as vagas restantes
-  const allTeamIndices = Array.from({ length: numTeams }, (_, i) => i);
-  distributeToTeams([...remainingPriority, ...regularPlayers], allTeamIndices);
+  // 3. Presentes completam os times 1 e 2; o excedente vai para os outros times
+  let remainingRegular = distributeToTeams(regularPlayers, primaryTeamIndices);
+  if (remainingRegular.length > 0 && otherTeamIndices.length > 0) {
+    remainingRegular = distributeToTeams(remainingRegular, otherTeamIndices);
+  }
+
+  // 4. Quem ainda não chegou completa as vagas restantes, preferindo o último time
+  distributeToTeams([...remainingPriority, ...remainingRegular, ...benchMarkedPlayers], [...allTeamIndices].reverse());
 
   const usedPlayerIds = teams.flat().map(p => p.id);
   const bench = players.filter(p => !usedPlayerIds.includes(p.id));

@@ -32,11 +32,12 @@ describe('buildTeamsText', () => {
         [{ name: 'Bia', id: 'b' }],
       ],
       [{ name: 'Carla', id: 'c' }],
-      ['a']
+      ['a'],
+      ['b']
     );
     expect(text).toContain('Sorteio - Racha X');
     expect(text).toContain('- Ana *');
-    expect(text).toContain('- Bia');
+    expect(text).toContain('- Bia (reserva)');
     expect(text).toContain('Reserva (1):');
     expect(text).toContain('- Carla');
   });
