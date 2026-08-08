@@ -1,4 +1,5 @@
 import { ArrowLeft, Users, Sun, Moon, Dices, Play } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 export default function RachaDetail({
   racha,
@@ -45,10 +46,17 @@ export default function RachaDetail({
             </div>
             <div>
               <h3 className="font-bold text-lg text-white flex items-center gap-2">
-                Placar em andamento
+                {activeMatch.paused ? 'Placar em pausa' : 'Placar em andamento'}
                 {!activeMatch.finished && (
-                  <span className="text-xs font-bold bg-white/20 text-white px-2 py-0.5 rounded-full animate-pulse">
-                    AO VIVO
+                  <span
+                    className={cn(
+                      'text-xs font-bold px-2 py-0.5 rounded-full',
+                      activeMatch.paused
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-white/20 text-white animate-pulse'
+                    )}
+                  >
+                    {activeMatch.paused ? 'EM PAUSA' : 'AO VIVO'}
                   </span>
                 )}
               </h3>

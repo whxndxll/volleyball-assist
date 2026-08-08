@@ -1,7 +1,6 @@
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import localforage from 'localforage';
-import { vi } from 'vitest';
 import App from './App';
 
 const rachaWithPlayers = (players) => ({
@@ -14,8 +13,11 @@ const p = (id, name) => ({ id, name });
 
 const runningMatch = (overrides = {}) => ({
   id: 'm1',
-  rachaId: 'r1',
   createdAt: 1,
+  startedAt: Date.now(),
+  resumedAt: Date.now(),
+  accumulatedMs: 0,
+  paused: false,
   targetPoints: 25,
   bestOf: 3,
   finished: false,
@@ -47,7 +49,7 @@ const score = async (user, teamName, times) => {
 };
 
 describe('App - scoreboard', () => {
-  it('adds points, finishes and resets a match', async () => {
+  it('pauses, resumes and resets a match', async () => {
     await localforage.setItem('rachas', [rachaWithPlayers(['Ana', 'Bia', 'Carla', 'Duda'])]);
     await localforage.setItem('activeMatch', runningMatch());
 
@@ -63,15 +65,23 @@ describe('App - scoreboard', () => {
     await user.click(team1Card);
     expect(within(team1Card).getByText('1')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Encerrar' }));
-    const overlay = screen.getByRole('dialog', { name: 'Resultado da partida' });
-    expect(within(overlay).getByText('Partida encerrada')).toBeInTheDocument();
-    expect(within(overlay).getByRole('button', { name: /Zerar placar/ })).toBeInTheDocument();
-    expect(within(overlay).getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Pausar' }));
 
-    await user.click(screen.getByRole('button', { name: /Zerar placar/ }));
+    expect(await screen.findByText('Placar em pausa')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continuar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Zerar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Parar' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(await screen.findByRole('button', { name: 'Pontuar Time 1' })).toBeInTheDocument();
+    expect(within(screen.getByRole('button', { name: 'Pontuar Time 1' })).getByText('1')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Zerar' }));
     expect(within(screen.getByRole('button', { name: 'Pontuar Time 1' })).getByText('0')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Encerrar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pausar' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Voltar' }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Encerrar' })).not.toBeInTheDocument();
   });
 
   it('opens the placar from the home screen when a match exists', async () => {
@@ -81,20 +91,33 @@ describe('App - scoreboard', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole('button', { name: 'Abrir placar' }));
+    await user.click(await screen.findByRole('button', { name: 'Abrir' }));
 
     expect(await screen.findByText('Placar')).toBeInTheDocument();
   });
 
-  it('shows a hint when trying to open the placar with no match', async () => {
-    await localforage.setItem('rachas', [rachaWithPlayers(['Ana'])]);
+  it('starts a quick placar from home without drawing the teams', async () => {
+    await localforage.setItem('rachas', [rachaWithPlayers(Array.from({ length: 12 }, (_, i) => `J ${i + 1}`))]);
 
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(await screen.findByRole('button', { name: 'Abrir placar' }));
+    await user.click(await screen.findByRole('button', { name: 'Iniciar placar rápido' }));
 
-    expect(await screen.findByText(/Nenhum placar em andamento/)).toBeInTheDocument();
+    expect(await screen.findByText('Placar')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pontuar Time 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pontuar Time 2' })).toBeInTheDocument();
+  });
+
+  it('hints when no racha has enough players for a quick placar', async () => {
+    await localforage.setItem('rachas', [rachaWithPlayers(['Ana', 'Bia'])]);
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(await screen.findByRole('button', { name: 'Iniciar placar rápido' }));
+
+    expect(await screen.findByText(/Nenhum racha com 12 ou mais jogadores/)).toBeInTheDocument();
   });
 });
 
@@ -201,13 +224,10 @@ describe('App - guest dedup', () => {
   });
 });
 
-describe('App - confirm before replacing active placar', () => {
-  it('asks for confirmation when an active match exists', async () => {
+describe('App - block starting another placar', () => {
+  it('does not allow starting a new placar while one is active', async () => {
     await localforage.setItem('rachas', [rachaWithPlayers(Array.from({ length: 12 }, (_, i) => `J ${i + 1}`))]);
     await localforage.setItem('activeMatch', runningMatch());
-
-    const confirmMock = vi.fn(() => false);
-    vi.stubGlobal('confirm', confirmMock);
 
     const user = userEvent.setup();
     render(<App />);
@@ -218,7 +238,7 @@ describe('App - confirm before replacing active placar', () => {
     await user.click(screen.getByRole('button', { name: 'Sortear Times' }));
     await user.click(screen.getByRole('button', { name: 'Iniciar Placar' }));
 
-    expect(confirmMock).toHaveBeenCalled();
+    expect(await screen.findByText(/Já existe um placar em andamento/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Iniciar Placar' })).toBeInTheDocument();
   });
 });

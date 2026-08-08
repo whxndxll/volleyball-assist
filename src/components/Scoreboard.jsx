@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Flag, RotateCcw, Trophy, MonitorSmartphone } from 'lucide-react';
+import { ArrowLeft, Pause, RotateCcw, Square, Timer, Trophy } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { TEAM_COLORS, setsToWin } from '../lib/match';
+import { TEAM_COLORS, setsToWin, matchElapsedMs, formatElapsed } from '../lib/match';
 
 const DRAG_THRESHOLD = 24;
 
-export default function Scoreboard({
-  rachaName,
+function ScoreboardBody({
   match,
   winner,
   onAddPoint,
   onRemovePoint,
-  onFinishMatch,
+  onPauseMatch,
   onResetMatch,
+  onStopMatch,
   onBack,
 }) {
   const gesture = useRef(null);
@@ -24,30 +24,15 @@ export default function Scoreboard({
   const inEndRange = maxPoints >= match.targetPoints - 1;
   const leader = t0.points > t1.points ? t0 : t1;
 
-  const [isPortrait, setIsPortrait] = useState(
-    () => typeof window.matchMedia === 'function' && window.matchMedia('(orientation: portrait)').matches
-  );
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return;
-    const orientation = screen.orientation;
-    let locked = false;
-    if (orientation && typeof orientation.lock === 'function') {
-      orientation
-        .lock('landscape')
-        .then(() => { locked = true; })
-        .catch(() => {});
-    }
-    const mql = window.matchMedia('(orientation: portrait)');
-    const onChange = (e) => setIsPortrait(e.matches);
-    mql.addEventListener('change', onChange);
-    return () => {
-      mql.removeEventListener('change', onChange);
-      if (locked && orientation && typeof orientation.unlock === 'function') {
-        orientation.unlock();
-      }
-    };
-  }, []);
+    if (match.finished || match.paused) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [match.finished, match.paused]);
+
+  const elapsedMs = matchElapsedMs(match, now);
 
   const statusFor = (team) => {
     if (match.finished) return null;
@@ -97,20 +82,8 @@ export default function Scoreboard({
     }
   };
 
-  if (isPortrait) {
-    return (
-      <div className="fixed inset-0 z-50 bg-slate-950 text-white flex flex-col items-center justify-center gap-6 p-8 text-center">
-        <MonitorSmartphone size={64} className="text-blue-400" />
-        <div>
-          <p className="text-2xl font-bold mb-2">Gire o aparelho</p>
-          <p className="text-slate-400 text-sm">O placar abre em modo paisagem (horizontal).</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4 pb-32 flex flex-col min-h-screen">
+    <div className="h-full w-full flex flex-col p-4 pb-32">
       <button
         onClick={onBack}
         className="flex items-center gap-2 text-slate-500 mb-4 hover:text-blue-600 transition-colors dark:text-slate-400"
@@ -121,7 +94,13 @@ export default function Scoreboard({
       <header className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Placar</h1>
-          <p className="text-slate-500 dark:text-slate-400">{rachaName}</p>
+          <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+            <Timer
+              size={18}
+              className={cn('transition-colors', match.finished || match.paused ? 'text-slate-400' : 'text-blue-500')}
+            />
+            <span className="font-bold tabular-nums text-xl">{formatElapsed(elapsedMs)}</span>
+          </div>
         </div>
         <div className="text-right text-sm text-slate-500 dark:text-slate-400">
           Melhor de {match.bestOf}
@@ -129,7 +108,7 @@ export default function Scoreboard({
         </div>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 flex-1 content-stretch">
+      <div className="grid grid-cols-2 gap-3 flex-1 content-stretch min-h-0">
         {match.teams.map((team, idx) => {
           const color = TEAM_COLORS[idx % TEAM_COLORS.length];
           const status = statusFor(team);
@@ -146,7 +125,7 @@ export default function Scoreboard({
               onContextMenu={(e) => e.preventDefault()}
               className={cn(
                 'rounded-3xl shadow-lg touch-none select-none flex flex-col items-center justify-center gap-2 p-4',
-                'landscape:py-6',
+                'sm:py-6',
                 match.finished && 'opacity-90',
                 color.bg,
                 color.darkBg
@@ -169,7 +148,7 @@ export default function Scoreboard({
               <p
                 className={cn(
                   'font-black text-white tabular-nums leading-none',
-                  'text-7xl sm:text-8xl landscape:text-9xl'
+                  'text-8xl sm:text-9xl'
                 )}
               >
                 {team.points}
@@ -206,7 +185,7 @@ export default function Scoreboard({
             <p className="text-slate-500 mb-6 dark:text-slate-400">
               {match.teams.map(t => `${t.name} ${t.sets}`).join(' · ')}
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 mb-3">
               <button
                 onClick={onResetMatch}
                 className="flex items-center justify-center gap-2 bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors"
@@ -220,22 +199,28 @@ export default function Scoreboard({
                 <ArrowLeft size={18} /> Voltar
               </button>
             </div>
+            <button
+              onClick={onStopMatch}
+              className="flex items-center justify-center gap-2 w-full bg-rose-50 text-rose-600 border border-rose-200 py-3 rounded-xl font-bold hover:bg-rose-100 transition-colors dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800 dark:hover:bg-rose-900/50"
+            >
+              <Square size={16} fill="currentColor" /> Parar placar
+            </button>
           </div>
         </div>
       ) : (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-slate-100 dark:bg-slate-900/80 dark:border-slate-700">
-          <div className="max-w-md mx-auto grid grid-cols-3 gap-3">
-            <button
-              onClick={onFinishMatch}
-              className="flex items-center justify-center gap-2 w-full bg-slate-800 text-white py-4 rounded-xl font-bold shadow-lg transition-all dark:bg-slate-700"
-            >
-              <Flag size={18} /> Encerrar
-            </button>
+          <div className="mx-auto grid grid-cols-3 gap-3">
             <button
               onClick={onResetMatch}
               className="flex items-center justify-center gap-2 w-full bg-slate-200 text-slate-700 py-4 rounded-xl font-bold transition-all dark:bg-slate-700 dark:text-slate-300"
             >
               <RotateCcw size={18} /> Zerar
+            </button>
+            <button
+              onClick={onPauseMatch}
+              className="flex items-center justify-center gap-2 w-full bg-slate-800 text-white py-4 rounded-xl font-bold shadow-lg transition-all dark:bg-slate-700"
+            >
+              <Pause size={18} /> Pausar
             </button>
             <button
               onClick={onBack}
@@ -246,6 +231,57 @@ export default function Scoreboard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export default function Scoreboard(props) {
+  const [isPortrait, setIsPortrait] = useState(
+    () => typeof window.matchMedia === 'function' && window.matchMedia('(orientation: portrait)').matches
+  );
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const orientation = screen.orientation;
+    let locked = false;
+    if (orientation && typeof orientation.lock === 'function') {
+      orientation
+        .lock('landscape')
+        .then(() => { locked = true; })
+        .catch(() => {});
+    }
+    const mql = window.matchMedia('(orientation: portrait)');
+    const onChange = (e) => setIsPortrait(e.matches);
+    mql.addEventListener('change', onChange);
+    return () => {
+      mql.removeEventListener('change', onChange);
+      if (locked && orientation && typeof orientation.unlock === 'function') {
+        orientation.unlock();
+      }
+    };
+  }, []);
+
+  if (isPortrait) {
+    // Renderiza já em paisagem: gira o conteúdo 90° sem depender do aparelho.
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-950 overflow-hidden">
+        <div
+          className="absolute left-1/2 top-1/2"
+          style={{
+            width: '100dvh',
+            height: '100dvw',
+            transform: 'translate(-50%, -50%) rotate(90deg)',
+          }}
+        >
+          <ScoreboardBody {...props} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-dvh">
+      <ScoreboardBody {...props} />
     </div>
   );
 }

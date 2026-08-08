@@ -1,5 +1,82 @@
-import { Plus, Users, Trash2, ChevronRight, Pencil, Sun, Moon, Download, Upload, Play } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { useEffect, useState } from 'react';
+import { Plus, Users, Trash2, ChevronRight, Pencil, Sun, Moon, Download, Upload, Timer, Zap } from 'lucide-react';
+import { formatElapsed, matchElapsedMs } from '../lib/match';
+
+function PlacarCard({ match, onContinue, onReset, onStop, onQuickStart }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!match || match.paused || match.finished) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [match]);
+
+  if (!match) {
+    return (
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+            <Timer size={18} />
+            <h2 className="font-semibold">Nenhum placar em andamento</h2>
+          </div>
+        </div>
+        <button
+          onClick={onQuickStart}
+          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-colors"
+        >
+          <Zap size={18} /> Iniciar placar rápido
+        </button>
+      </div>
+    );
+  }
+
+  const [t0, t1] = match.teams;
+
+  return (
+    <div className="bg-emerald-600 rounded-2xl p-4 text-white shadow-lg shadow-emerald-200 dark:shadow-none">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Timer size={18} />
+          <h2 className="font-bold">{match.paused ? 'Placar em pausa' : 'Placar em andamento'}</h2>
+        </div>
+        <span className="font-bold tabular-nums text-lg">{formatElapsed(matchElapsedMs(match, now))}</span>
+      </div>
+      <div className="flex items-center bg-white/10 rounded-xl px-4 py-3 mb-3">
+        <div className="flex-1 text-center min-w-0">
+          <p className="text-xs opacity-80 truncate">{t0.name}</p>
+          <p className="text-4xl font-black tabular-nums leading-tight">{t0.points}</p>
+          <p className="text-xs opacity-80">{t0.sets} set{t0.sets === 1 ? '' : 's'}</p>
+        </div>
+        <span className="text-2xl font-bold opacity-50 px-2">×</span>
+        <div className="flex-1 text-center min-w-0">
+          <p className="text-xs opacity-80 truncate">{t1.name}</p>
+          <p className="text-4xl font-black tabular-nums leading-tight">{t1.points}</p>
+          <p className="text-xs opacity-80">{t1.sets} set{t1.sets === 1 ? '' : 's'}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <button
+          onClick={onContinue}
+          className="bg-white text-emerald-700 py-2.5 rounded-xl font-bold text-sm hover:bg-emerald-50 transition-colors"
+        >
+          {match.paused ? 'Continuar' : 'Abrir'}
+        </button>
+        <button
+          onClick={onReset}
+          className="bg-white/20 py-2.5 rounded-xl font-bold text-sm hover:bg-white/30 transition-colors"
+        >
+          Zerar
+        </button>
+        <button
+          onClick={onStop}
+          className="bg-rose-500 py-2.5 rounded-xl font-bold text-sm hover:bg-rose-600 transition-colors"
+        >
+          Parar
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function RachaList({
   rachas,
@@ -15,8 +92,11 @@ export default function RachaList({
   onStartEditRacha,
   onSaveRachaName,
   onOpenRacha,
-  activeMatch,
-  onOpenPlacar,
+  match,
+  onContinuePlacar,
+  onResetPlacar,
+  onStopPlacar,
+  onQuickStartPlacar,
   darkMode,
   onToggleTheme,
   onExport,
@@ -24,26 +104,13 @@ export default function RachaList({
 }) {
   return (
     <>
-      <header className="mb-8 p-4 pt-6">
+      <header className="mb-6 p-4 pt-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-blue-600">Vôlei Assist</h1>
             <p className="text-slate-500 dark:text-slate-400">Gerencie seus rachas com facilidade</p>
           </div>
           <div className="flex items-center gap-1">
-            <button
-              onClick={onOpenPlacar}
-              className={cn(
-                'p-2 rounded-lg transition-colors',
-                activeMatch
-                  ? 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400'
-                  : 'text-slate-500 hover:text-blue-600 dark:text-slate-400'
-              )}
-              title={activeMatch ? 'Placar em andamento' : 'Placar'}
-              aria-label="Abrir placar"
-            >
-              <Play size={20} />
-            </button>
             <button
               onClick={onToggleTheme}
               className="p-2 rounded-lg text-slate-500 hover:text-blue-600 transition-colors dark:text-slate-400"
@@ -55,6 +122,16 @@ export default function RachaList({
           </div>
         </div>
       </header>
+
+      <div className="px-4 pb-4">
+        <PlacarCard
+          match={match}
+          onContinue={onContinuePlacar}
+          onReset={onResetPlacar}
+          onStop={onStopPlacar}
+          onQuickStart={onQuickStartPlacar}
+        />
+      </div>
 
       <div className="space-y-4 px-4 pb-8">
         <div className="space-y-1">

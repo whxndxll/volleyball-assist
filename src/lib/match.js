@@ -8,3 +8,21 @@ export const TEAM_COLORS = [
 ];
 
 export const setsToWin = (match) => Math.floor(match.bestOf / 2) + 1;
+
+export const matchElapsedMs = (match, now) => {
+  if (!match) return 0;
+  const accumulated = match.accumulatedMs || 0;
+  if (match.paused || match.finished) return accumulated;
+  const base = match.resumedAt || match.startedAt || match.createdAt || now;
+  return accumulated + Math.max(0, now - base);
+};
+
+export const formatElapsed = (ms) => {
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+};

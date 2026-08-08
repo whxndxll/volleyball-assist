@@ -121,9 +121,7 @@ function App() {
 
   const deleteRacha = (racha) => {
     const index = rachas.findIndex(r => r.id === racha.id);
-    const deletedMatch = match && match.rachaId === racha.id ? match : null;
     setRachas(prev => prev.filter(r => r.id !== racha.id));
-    if (deletedMatch) setMatch(null);
     if (activeRachaId === racha.id) {
       setActiveRachaId(null);
       setView('list');
@@ -354,14 +352,19 @@ function App() {
 
   const startMatch = () => {
     if (!drawResult || drawResult.teams.length === 0) return;
-    if (match && !match.finished && !window.confirm('Já existe um placar em andamento. Encerrar e iniciar um novo?')) {
+    if (match) {
+      showToast('Já existe um placar em andamento. Pare-o antes de iniciar outro.');
       return;
     }
     const newMatch = {
       id: uuid(),
-      rachaId: activeRachaId,
       targetPoints: Math.max(1, Number(matchConfig.targetPoints) || 25),
       bestOf: matchConfig.bestOf,
+      createdAt: Date.now(),
+      startedAt: Date.now(),
+      resumedAt: Date.now(),
+      accumulatedMs: 0,
+      paused: false,
       finished: false,
       teams: drawResult.teams.map((players, i) => ({
         id: uuid(),
@@ -378,7 +381,7 @@ function App() {
 
   const addPoint = (teamId) => {
     setMatch(prev => {
-      if (!prev || prev.finished) return prev;
+      if (!prev || prev.finished || prev.paused) return prev;
       const teams = prev.teams.map(t =>
         t.id === teamId ? { ...t, points: t.points + 1 } : t
       );
@@ -396,7 +399,7 @@ function App() {
 
   const removePoint = (teamId) => {
     setMatch(prev => {
-      if (!prev || prev.finished) return prev;
+      if (!prev || prev.finished || prev.paused) return prev;
       return {
         ...prev,
         teams: prev.teams.map(t =>
@@ -406,24 +409,75 @@ function App() {
     });
   };
 
-  const finishMatch = () => {
-    setMatch(prev => (prev ? { ...prev, finished: true } : prev));
+  const pauseMatch = () => {
+    setMatch(prev => (prev && !prev.finished ? { ...prev, paused: true } : prev));
+    setView('list');
+  };
+
+  const resumeMatch = () => {
+    setMatch(prev => (prev ? { ...prev, paused: false, resumedAt: Date.now() } : prev));
+    setView('match');
   };
 
   const resetMatch = () => {
     setMatch(prev => (prev ? {
       ...prev,
       finished: false,
+      paused: false,
+      startedAt: Date.now(),
+      resumedAt: Date.now(),
+      accumulatedMs: 0,
       teams: prev.teams.map(t => ({ ...t, points: 0, sets: 0 })),
     } : prev));
   };
 
-  const openPlacarFromHome = () => {
+  const stopMatch = () => {
+    setMatch(null);
+    setView(activeRacha ? 'detail' : 'list');
+  };
+
+  const quickStartPlacar = () => {
     if (match) {
-      setView('match');
-    } else {
-      showToast('Nenhum placar em andamento. Abra um racha e faça um sorteio para iniciar.');
+      showToast('Já existe um placar em andamento. Pare-o antes de iniciar outro.');
+      return;
     }
+    const racha = rachas.find(r => r.players.length >= 12);
+    if (!racha) {
+      showToast('Nenhum racha com 12 ou mais jogadores para o sorteio rápido.');
+      return;
+    }
+    const result = drawTeams({
+      players: racha.players,
+      playersPerTeam: 6,
+      numTeams: 2,
+      priorityPlayerIds: [],
+      benchPlayerIds: [],
+    });
+    if (result.teams.length < 2) {
+      showToast('Nenhum racha com jogadores suficientes para o sorteio rápido.');
+      return;
+    }
+    const newMatch = {
+      id: uuid(),
+      targetPoints: 25,
+      bestOf: 3,
+      createdAt: Date.now(),
+      startedAt: Date.now(),
+      resumedAt: Date.now(),
+      accumulatedMs: 0,
+      paused: false,
+      finished: false,
+      teams: result.teams.map((players, i) => ({
+        id: uuid(),
+        name: `Time ${i + 1}`,
+        players,
+        points: 0,
+        sets: 0,
+      })),
+    };
+    setMatch(newMatch);
+    setActiveRachaId(racha.id);
+    setView('match');
   };
 
   const handleExport = () => {
@@ -470,7 +524,20 @@ function App() {
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      {view === 'match' && match ? (
+        <Scoreboard
+          match={match}
+          winner={matchWinner}
+          onAddPoint={addPoint}
+          onRemovePoint={removePoint}
+          onPauseMatch={pauseMatch}
+          onResetMatch={resetMatch}
+          onStopMatch={stopMatch}
+          onBack={() => setView(activeRacha ? 'detail' : 'list')}
+        />
+      ) : (
+      <div className="max-w-md mx-auto min-h-screen">
       {view === 'list' && (
         <RachaList
           rachas={rachas}
@@ -486,8 +553,11 @@ function App() {
           onStartEditRacha={startEditRacha}
           onSaveRachaName={saveRachaName}
           onOpenRacha={(racha) => { setActiveRachaId(racha.id); setView('detail'); }}
-          activeMatch={match}
-          onOpenPlacar={openPlacarFromHome}
+          match={match}
+          onContinuePlacar={resumeMatch}
+          onResetPlacar={resetMatch}
+          onStopPlacar={stopMatch}
+          onQuickStartPlacar={quickStartPlacar}
           darkMode={darkMode}
           onToggleTheme={() => setDarkMode(d => !d)}
           onExport={handleExport}
@@ -501,7 +571,7 @@ function App() {
           activeMatch={match}
           onBack={() => setView('list')}
           onPlayers={() => setView('players')}
-          onPlacar={() => setView('match')}
+          onPlacar={() => (match && match.paused ? resumeMatch() : setView('match'))}
           onNewDraw={() => {
             setSelectedPlayerIds([]);
             setPriorityPlayerIds([]);
@@ -573,18 +643,7 @@ function App() {
           setMatchConfig={setMatchConfig}
         />
       )}
-
-      {view === 'match' && match && (
-        <Scoreboard
-          rachaName={rachas.find(r => r.id === match.rachaId)?.name ?? 'Placar'}
-          match={match}
-          winner={matchWinner}
-          onAddPoint={(teamId) => addPoint(teamId)}
-          onRemovePoint={(teamId) => removePoint(teamId)}
-          onFinishMatch={finishMatch}
-          onResetMatch={resetMatch}
-          onBack={() => setView(activeRacha ? 'detail' : 'list')}
-        />
+      </div>
       )}
 
       <Toast toast={toast} onDismiss={dismissToast} />
