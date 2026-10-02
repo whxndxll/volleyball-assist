@@ -87,26 +87,26 @@ function ScoreboardBody({
   };
 
   return (
-    <div className="h-full w-full flex flex-col p-4 pb-32">
-      <button
-        onClick={onBack}
-        className="flex items-center gap-2 text-slate-500 mb-4 hover:text-blue-600 transition-colors dark:text-slate-400"
-      >
-        <ArrowLeft size={20} /> Voltar
-      </button>
-
-      <header className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Placar</h1>
+    <div className="h-full w-full flex flex-col p-3 sm:p-4 gap-2">
+      <header className="flex items-center justify-between gap-3">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-slate-500 hover:text-blue-600 transition-colors dark:text-slate-400 shrink-0"
+          aria-label="Voltar"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <div className="flex flex-col items-center">
+          <h1 className="text-lg font-bold leading-tight">Placar</h1>
           <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
             <Timer
-              size={18}
+              size={14}
               className={cn('transition-colors', match.finished || match.paused ? 'text-slate-400' : 'text-blue-500')}
             />
-            <span className="font-bold tabular-nums text-xl">{formatElapsed(elapsedMs)}</span>
+            <span className="font-bold tabular-nums text-sm">{formatElapsed(elapsedMs)}</span>
           </div>
         </div>
-        <div className="text-right text-sm text-slate-500 dark:text-slate-400">
+        <div className="text-right text-xs text-slate-500 dark:text-slate-400 shrink-0">
           Melhor de {match.bestOf}
           <p className="text-xs">até {match.targetPoints} pts</p>
         </div>
@@ -182,7 +182,7 @@ function ScoreboardBody({
               <p
                 className={cn(
                   'font-black text-white tabular-nums leading-none',
-                  'text-8xl sm:text-9xl'
+                  'text-6xl sm:text-8xl md:text-9xl'
                 )}
               >
                 {team.points}
@@ -217,8 +217,8 @@ function ScoreboardBody({
         })}
       </div>
 
-      <p className="text-xs text-slate-400 mt-4 text-center dark:text-slate-500">
-        Toque no número para pontuar · arraste para baixo para desfazer
+      <p className="text-xs text-slate-400 text-center dark:text-slate-500">
+        Toque no número ou use +/− para pontuar
       </p>
 
       {match.finished ? (
@@ -260,31 +260,25 @@ function ScoreboardBody({
           </div>
         </div>
       ) : (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-slate-100 dark:bg-slate-900/80 dark:border-slate-700">
-          <div className="mx-auto grid grid-cols-4 gap-3">
+        <div className="pt-2">
+          <div className="mx-auto grid grid-cols-3 gap-2">
             <button
               onClick={onResetMatch}
-              className="flex items-center justify-center gap-2 w-full bg-slate-200 text-slate-700 py-4 rounded-xl font-bold transition-all dark:bg-slate-700 dark:text-slate-300"
+              className="flex items-center justify-center gap-1.5 w-full bg-slate-200 text-slate-700 py-3 rounded-xl font-bold transition-all dark:bg-slate-700 dark:text-slate-300"
             >
-              <RotateCcw size={18} /> Zerar
+              <RotateCcw size={16} /> Zerar
             </button>
             <button
               onClick={onUndoLastPoint}
-              className="flex items-center justify-center gap-2 w-full bg-amber-100 text-amber-700 py-4 rounded-xl font-bold transition-all dark:bg-amber-900/30 dark:text-amber-300"
+              className="flex items-center justify-center gap-1.5 w-full bg-amber-100 text-amber-700 py-3 rounded-xl font-bold transition-all dark:bg-amber-900/30 dark:text-amber-300"
             >
-              <Undo2 size={18} /> Desfazer
+              <Undo2 size={16} /> Desfazer
             </button>
             <button
               onClick={onPauseMatch}
-              className="flex items-center justify-center gap-2 w-full bg-slate-800 text-white py-4 rounded-xl font-bold shadow-lg transition-all dark:bg-slate-700"
+              className="flex items-center justify-center gap-1.5 w-full bg-slate-800 text-white py-3 rounded-xl font-bold shadow-lg transition-all dark:bg-slate-700"
             >
-              <Pause size={18} /> Pausar
-            </button>
-            <button
-              onClick={onBack}
-              className="flex items-center justify-center gap-2 w-full bg-white border border-slate-200 text-slate-600 py-4 rounded-xl font-bold transition-all dark:bg-slate-800 dark:border-slate-600 dark:text-slate-300"
-            >
-              <ArrowLeft size={18} /> Voltar
+              <Pause size={16} /> Pausar
             </button>
           </div>
         </div>
