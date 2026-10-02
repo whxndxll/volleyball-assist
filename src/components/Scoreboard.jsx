@@ -273,12 +273,31 @@ export default function Scoreboard(props) {
     if (typeof window.matchMedia !== 'function') return;
     const orientation = screen.orientation;
     let locked = false;
-    if (orientation && typeof orientation.lock === 'function') {
-      orientation
-        .lock('landscape')
-        .then(() => { locked = true; })
-        .catch(() => {});
-    }
+    let didFullscreen = false;
+
+    const enterFullscreen = async () => {
+      try {
+        if (document.fullscreenEnabled && !document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+          didFullscreen = true;
+        }
+      } catch {
+        // fullscreen negado (ex.: iOS Safari) — segue com rotação CSS
+      }
+    };
+
+    const lock = async () => {
+      if (orientation && typeof orientation.lock === 'function') {
+        try {
+          await orientation.lock('landscape');
+          locked = true;
+        } catch {
+          // iOS ou sem fullscreen — segue com rotação CSS
+        }
+      }
+    };
+
+    enterFullscreen().then(lock);
     const mql = window.matchMedia('(orientation: portrait)');
     const onChange = (e) => setIsPortrait(e.matches);
     mql.addEventListener('change', onChange);
@@ -286,6 +305,9 @@ export default function Scoreboard(props) {
       mql.removeEventListener('change', onChange);
       if (locked && orientation && typeof orientation.unlock === 'function') {
         orientation.unlock();
+      }
+      if (didFullscreen && document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
       }
     };
   }, []);
