@@ -190,6 +190,7 @@ function ScoreboardBody({
               <div className="flex items-center gap-4 mt-1">
                 <button
                   onClick={(e) => { e.stopPropagation(); onRemovePoint(team.id); }}
+                  onPointerDown={(e) => e.stopPropagation()}
                   onPointerUp={(e) => e.stopPropagation()}
                   className="w-10 h-10 rounded-full bg-white/20 text-white text-xl font-bold flex items-center justify-center hover:bg-white/30 transition-colors"
                   aria-label={`Remover ponto ${team.name}`}
@@ -198,6 +199,7 @@ function ScoreboardBody({
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); onAddPoint(team.id); }}
+                  onPointerDown={(e) => e.stopPropagation()}
                   onPointerUp={(e) => e.stopPropagation()}
                   className="w-10 h-10 rounded-full bg-white/30 text-white text-xl font-bold flex items-center justify-center hover:bg-white/40 transition-colors"
                   aria-label={`Adicionar ponto ${team.name}`}
