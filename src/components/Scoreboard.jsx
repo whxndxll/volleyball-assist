@@ -217,10 +217,6 @@ function ScoreboardBody({
         })}
       </div>
 
-      <p className="text-xs text-slate-400 text-center dark:text-slate-500">
-        Toque no número ou use +/− para pontuar
-      </p>
-
       {match.finished ? (
         <div className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-6">
           <div
