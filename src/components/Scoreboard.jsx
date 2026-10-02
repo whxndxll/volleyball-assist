@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Pause, RotateCcw, Square, Timer, Trophy } from 'lucide-react';
+import { ArrowLeft, Pause, RotateCcw, Square, Timer, Trophy, Undo2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { TEAM_COLORS, setsToWin, matchElapsedMs, formatElapsed } from '../lib/match';
 
@@ -10,10 +10,12 @@ function ScoreboardBody({
   winner,
   onAddPoint,
   onRemovePoint,
+  onUndoLastPoint,
   onPauseMatch,
   onResetMatch,
   onStopMatch,
   onBack,
+  onRenameTeam,
 }) {
   const gesture = useRef(null);
   const targetSets = setsToWin(match);
@@ -24,6 +26,8 @@ function ScoreboardBody({
   const inEndRange = maxPoints >= match.targetPoints - 1;
   const leader = t0.points > t1.points ? t0 : t1;
 
+  const [editingTeamId, setEditingTeamId] = useState(null);
+  const [editingTeamName, setEditingTeamName] = useState('');
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -142,9 +146,39 @@ function ScoreboardBody({
                   />
                 ))}
               </div>
-              <h3 className="font-bold text-white text-sm sm:text-base truncate max-w-full px-1">
-                {team.name}
-              </h3>
+              {editingTeamId === team.id ? (
+                <input
+                  autoFocus
+                  value={editingTeamName}
+                  onChange={(e) => setEditingTeamName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      onRenameTeam?.(team.id, editingTeamName);
+                      setEditingTeamId(null);
+                    }
+                    if (e.key === 'Escape') setEditingTeamId(null);
+                  }}
+                  onBlur={() => {
+                    onRenameTeam?.(team.id, editingTeamName);
+                    setEditingTeamId(null);
+                  }}
+                  className="font-bold text-white text-sm sm:text-base bg-white/20 rounded px-2 py-0.5 max-w-full text-center"
+                  aria-label={`Renomear ${team.name}`}
+                />
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingTeamId(team.id);
+                    setEditingTeamName(team.name);
+                  }}
+                  className="font-bold text-white text-sm sm:text-base truncate max-w-full px-1"
+                  title="Toque para renomear"
+                  aria-label={`Renomear ${team.name}`}
+                >
+                  {team.name}
+                </button>
+              )}
               <p
                 className={cn(
                   'font-black text-white tabular-nums leading-none',
@@ -153,6 +187,24 @@ function ScoreboardBody({
               >
                 {team.points}
               </p>
+              <div className="flex items-center gap-4 mt-1">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onRemovePoint(team.id); }}
+                  onPointerUp={(e) => e.stopPropagation()}
+                  className="w-10 h-10 rounded-full bg-white/20 text-white text-xl font-bold flex items-center justify-center hover:bg-white/30 transition-colors"
+                  aria-label={`Remover ponto ${team.name}`}
+                >
+                  −
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onAddPoint(team.id); }}
+                  onPointerUp={(e) => e.stopPropagation()}
+                  className="w-10 h-10 rounded-full bg-white/30 text-white text-xl font-bold flex items-center justify-center hover:bg-white/40 transition-colors"
+                  aria-label={`Adicionar ponto ${team.name}`}
+                >
+                  +
+                </button>
+              </div>
               {status ? (
                 <p className="text-white/90 text-xs font-bold uppercase tracking-wide bg-white/20 rounded-full px-3 py-0.5">
                   {status}
@@ -209,12 +261,18 @@ function ScoreboardBody({
         </div>
       ) : (
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-slate-100 dark:bg-slate-900/80 dark:border-slate-700">
-          <div className="mx-auto grid grid-cols-3 gap-3">
+          <div className="mx-auto grid grid-cols-4 gap-3">
             <button
               onClick={onResetMatch}
               className="flex items-center justify-center gap-2 w-full bg-slate-200 text-slate-700 py-4 rounded-xl font-bold transition-all dark:bg-slate-700 dark:text-slate-300"
             >
               <RotateCcw size={18} /> Zerar
+            </button>
+            <button
+              onClick={onUndoLastPoint}
+              className="flex items-center justify-center gap-2 w-full bg-amber-100 text-amber-700 py-4 rounded-xl font-bold transition-all dark:bg-amber-900/30 dark:text-amber-300"
+            >
+              <Undo2 size={18} /> Desfazer
             </button>
             <button
               onClick={onPauseMatch}

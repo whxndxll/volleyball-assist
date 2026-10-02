@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Users, Trash2, ChevronRight, Pencil, Sun, Moon, Download, Upload, Timer, Zap } from 'lucide-react';
+import { Plus, Users, Trash2, ChevronRight, Pencil, Sun, Moon, Download, Upload, Timer, Zap, History } from 'lucide-react';
 import { formatElapsed, matchElapsedMs } from '../lib/match';
 
 function PlacarCard({ match, onContinue, onReset, onStop, onQuickStart }) {
@@ -101,6 +101,10 @@ export default function RachaList({
   onToggleTheme,
   onExport,
   onImportFile,
+  isExporting,
+  isImporting,
+  matchHistory = [],
+  onClearHistory,
 }) {
   return (
     <>
@@ -225,18 +229,48 @@ export default function RachaList({
           )}
         </div>
 
+        {matchHistory.length > 0 && (
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                <History size={16} /> Histórico de partidas
+              </h2>
+              <button onClick={onClearHistory} className="text-xs text-slate-400 hover:text-red-500 dark:text-slate-500">
+                Limpar
+              </button>
+            </div>
+            <div className="space-y-2">
+              {matchHistory.slice(0, 10).map(m => (
+                <div key={m.id} className="bg-white p-3 rounded-lg border border-slate-100 text-sm dark:bg-slate-800 dark:border-slate-700">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">{m.teams.map(t => t.name).join(' vs ')}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                      {new Date(m.endedAt || m.createdAt).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {m.teams.map(t => `${t.name} ${t.sets} set${t.sets === 1 ? '' : 's'}`).join(' · ')}
+                    {m.winner && <span className="text-emerald-600 dark:text-emerald-400 font-medium"> · {m.winner} venceu</span>}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
           <p className="text-xs text-slate-400 mb-3 dark:text-slate-500">Backup: exporte ou restaure seus dados.</p>
           <div className="flex gap-2">
             <button
               onClick={onExport}
-              className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-semibold hover:border-blue-200 hover:text-blue-600 transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+              disabled={isExporting}
+              className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-semibold hover:border-blue-200 hover:text-blue-600 transition-colors disabled:opacity-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
             >
-              <Download size={16} /> Exportar
+              <Download size={16} /> {isExporting ? 'Exportando...' : 'Exportar'}
             </button>
-            <label className="flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-semibold cursor-pointer hover:border-blue-200 hover:text-blue-600 transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
-              <Upload size={16} /> Importar
-              <input type="file" accept="application/json,.json" className="hidden" onChange={onImportFile} />
+            <label className={`flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-semibold cursor-pointer hover:border-blue-200 hover:text-blue-600 transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 ${isImporting ? 'opacity-50 pointer-events-none' : ''}`}>
+              <Upload size={16} /> {isImporting ? 'Importando...' : 'Importar'}
+              <input type="file" accept="application/json,.json" className="hidden" onChange={onImportFile} disabled={isImporting} />
             </label>
           </div>
         </div>

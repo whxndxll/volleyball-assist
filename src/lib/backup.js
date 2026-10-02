@@ -6,10 +6,15 @@ export function serializeBackup({ rachas }) {
   );
 }
 
+const SUPPORTED_VERSION = 2;
+
 export function parseBackup(text) {
   const data = JSON.parse(text);
   if (!data || !Array.isArray(data.rachas)) {
     throw new Error('Formato de backup inválido');
+  }
+  if (typeof data.version !== 'number' || data.version > SUPPORTED_VERSION) {
+    throw new Error('Versão de backup não suportada');
   }
   return { rachas: data.rachas };
 }

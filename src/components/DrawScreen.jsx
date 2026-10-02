@@ -32,6 +32,8 @@ export default function DrawScreen({
   onAdjust,
   onBack,
   onFinalize,
+  onRestorePresence,
+  hasLastPresence,
   canDraw,
   fullTeams,
   playersPerTeam,
@@ -230,6 +232,9 @@ export default function DrawScreen({
             <div className="flex items-center justify-between mb-1">
               <h3 className="font-bold">2. Presença</h3>
               <div className="flex gap-3">
+                {hasLastPresence && (
+                  <button onClick={onRestorePresence} className="text-xs font-medium text-emerald-600">Repetir presença</button>
+                )}
                 <button onClick={onSelectAllMembers} className="text-xs font-medium text-blue-600">Todos</button>
                 <button onClick={onClearMembers} className="text-xs font-medium text-slate-400 dark:text-slate-500">Nenhum</button>
               </div>
