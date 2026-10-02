@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Pause, RotateCcw, Square, Timer, Trophy, Undo2 } from 'lucide-react';
+import { ArrowLeft, Pause, RotateCcw, Square, Timer, Trophy, Undo2, Maximize } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { TEAM_COLORS, setsToWin, matchElapsedMs, formatElapsed } from '../lib/match';
 
@@ -16,6 +16,7 @@ function ScoreboardBody({
   onStopMatch,
   onBack,
   onEditTeam,
+  onFullscreen,
 }) {
   const gesture = useRef(null);
   const targetSets = setsToWin(match);
@@ -105,9 +106,20 @@ function ScoreboardBody({
             <span className="font-bold tabular-nums text-sm">{formatElapsed(elapsedMs)}</span>
           </div>
         </div>
-        <div className="text-right text-xs text-slate-500 dark:text-slate-400 shrink-0">
-          Melhor de {match.bestOf}
-          <p className="text-xs">até {match.targetPoints} pts</p>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className="text-right text-xs text-slate-500 dark:text-slate-400">
+            Melhor de {match.bestOf}
+            <p className="text-xs">até {match.targetPoints} pts</p>
+          </div>
+          {onFullscreen && (
+            <button
+              onClick={onFullscreen}
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors dark:text-slate-500"
+              aria-label="Tela cheia e paisagem"
+            >
+              <Maximize size={14} /> Tela cheia
+            </button>
+          )}
         </div>
       </header>
 
@@ -271,46 +283,38 @@ export default function Scoreboard(props) {
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return;
-    const orientation = screen.orientation;
-    let locked = false;
-    let didFullscreen = false;
-
-    const enterFullscreen = async () => {
-      try {
-        if (document.fullscreenEnabled && !document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
-          didFullscreen = true;
-        }
-      } catch {
-        // fullscreen negado (ex.: iOS Safari) — segue com rotação CSS
-      }
-    };
-
-    const lock = async () => {
-      if (orientation && typeof orientation.lock === 'function') {
-        try {
-          await orientation.lock('landscape');
-          locked = true;
-        } catch {
-          // iOS ou sem fullscreen — segue com rotação CSS
-        }
-      }
-    };
-
-    enterFullscreen().then(lock);
     const mql = window.matchMedia('(orientation: portrait)');
     const onChange = (e) => setIsPortrait(e.matches);
     mql.addEventListener('change', onChange);
     return () => {
       mql.removeEventListener('change', onChange);
-      if (locked && orientation && typeof orientation.unlock === 'function') {
+      const orientation = screen.orientation;
+      if (orientation && typeof orientation.unlock === 'function') {
         orientation.unlock();
       }
-      if (didFullscreen && document.fullscreenElement) {
+      if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
     };
   }, []);
+
+  const handleFullscreen = async () => {
+    try {
+      if (document.fullscreenEnabled && !document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      // fullscreen negado (ex.: iOS Safari) — segue com rotação CSS
+    }
+    const orientation = screen.orientation;
+    if (orientation && typeof orientation.lock === 'function') {
+      try {
+        await orientation.lock('landscape');
+      } catch {
+        // iOS ou sem fullscreen — segue com rotação CSS
+      }
+    }
+  };
 
   const handleEditTeam = (team) => {
     setEditingTeam(team);
@@ -334,7 +338,7 @@ export default function Scoreboard(props) {
             transform: 'translate(-50%, -50%) rotate(90deg)',
           }}
         >
-          <ScoreboardBody {...props} onEditTeam={handleEditTeam} />
+          <ScoreboardBody {...props} onEditTeam={handleEditTeam} onFullscreen={handleFullscreen} />
         </div>
         {editingTeam && (
           <div className="fixed inset-0 z-[60] bg-slate-950/80 flex items-center justify-center p-6">
