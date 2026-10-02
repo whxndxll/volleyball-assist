@@ -47,6 +47,7 @@ function ScoreboardBody({
   };
 
   const beginGesture = (e) => {
+    if (e.target.closest('button, input')) return;
     try {
       e.currentTarget.setPointerCapture?.(e.pointerId);
     } catch {
