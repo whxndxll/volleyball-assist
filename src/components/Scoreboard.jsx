@@ -15,7 +15,7 @@ function ScoreboardBody({
   onResetMatch,
   onStopMatch,
   onBack,
-  onRenameTeam,
+  onEditTeam,
 }) {
   const gesture = useRef(null);
   const targetSets = setsToWin(match);
@@ -26,8 +26,6 @@ function ScoreboardBody({
   const inEndRange = maxPoints >= match.targetPoints - 1;
   const leader = t0.points > t1.points ? t0 : t1;
 
-  const [editingTeamId, setEditingTeamId] = useState(null);
-  const [editingTeamName, setEditingTeamName] = useState('');
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -147,39 +145,17 @@ function ScoreboardBody({
                   />
                 ))}
               </div>
-              {editingTeamId === team.id ? (
-                <input
-                  autoFocus
-                  value={editingTeamName}
-                  onChange={(e) => setEditingTeamName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      onRenameTeam?.(team.id, editingTeamName);
-                      setEditingTeamId(null);
-                    }
-                    if (e.key === 'Escape') setEditingTeamId(null);
-                  }}
-                  onBlur={() => {
-                    onRenameTeam?.(team.id, editingTeamName);
-                    setEditingTeamId(null);
-                  }}
-                  className="font-bold text-white text-sm sm:text-base bg-white/20 rounded px-2 py-0.5 max-w-full text-center"
-                  aria-label={`Renomear ${team.name}`}
-                />
-              ) : (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingTeamId(team.id);
-                    setEditingTeamName(team.name);
-                  }}
-                  className="font-bold text-white text-sm sm:text-base truncate max-w-full px-1"
-                  title="Toque para renomear"
-                  aria-label={`Renomear ${team.name}`}
-                >
-                  {team.name}
-                </button>
-              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditTeam(team);
+                }}
+                className="font-bold text-white text-sm sm:text-base truncate max-w-full px-1"
+                title="Toque para renomear"
+                aria-label={`Renomear ${team.name}`}
+              >
+                {team.name}
+              </button>
               <p
                 className={cn(
                   'font-black text-white tabular-nums leading-none',
@@ -290,6 +266,8 @@ export default function Scoreboard(props) {
   const [isPortrait, setIsPortrait] = useState(
     () => typeof window.matchMedia === 'function' && window.matchMedia('(orientation: portrait)').matches
   );
+  const [editingTeam, setEditingTeam] = useState(null);
+  const [editingTeamName, setEditingTeamName] = useState('');
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return;
@@ -312,6 +290,16 @@ export default function Scoreboard(props) {
     };
   }, []);
 
+  const handleEditTeam = (team) => {
+    setEditingTeam(team);
+    setEditingTeamName(team.name);
+  };
+
+  const saveTeamName = () => {
+    if (editingTeam) props.onRenameTeam?.(editingTeam.id, editingTeamName);
+    setEditingTeam(null);
+  };
+
   if (isPortrait) {
     // Renderiza já em paisagem: gira o conteúdo 90° sem depender do aparelho.
     return (
@@ -324,15 +312,79 @@ export default function Scoreboard(props) {
             transform: 'translate(-50%, -50%) rotate(90deg)',
           }}
         >
-          <ScoreboardBody {...props} />
+          <ScoreboardBody {...props} onEditTeam={handleEditTeam} />
         </div>
+        {editingTeam && (
+          <div className="fixed inset-0 z-[60] bg-slate-950/80 flex items-center justify-center p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+              <h2 className="text-lg font-bold mb-4">Renomear time</h2>
+              <input
+                autoFocus
+                value={editingTeamName}
+                onChange={(e) => setEditingTeamName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveTeamName();
+                  if (e.key === 'Escape') setEditingTeam(null);
+                }}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 mb-4"
+                aria-label="Nome do time"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setEditingTeam(null)}
+                  className="py-2.5 rounded-xl font-bold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={saveTeamName}
+                  className="py-2.5 rounded-xl font-bold bg-blue-600 text-white"
+                >
+                  Salvar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <div className="h-dvh">
-      <ScoreboardBody {...props} />
+      <ScoreboardBody {...props} onEditTeam={handleEditTeam} />
+      {editingTeam && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/80 flex items-center justify-center p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h2 className="text-lg font-bold mb-4">Renomear time</h2>
+            <input
+              autoFocus
+              value={editingTeamName}
+              onChange={(e) => setEditingTeamName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveTeamName();
+                if (e.key === 'Escape') setEditingTeam(null);
+              }}
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 mb-4"
+              aria-label="Nome do time"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setEditingTeam(null)}
+                className="py-2.5 rounded-xl font-bold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveTeamName}
+                className="py-2.5 rounded-xl font-bold bg-blue-600 text-white"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
