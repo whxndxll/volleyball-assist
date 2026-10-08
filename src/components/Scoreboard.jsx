@@ -107,19 +107,19 @@ function ScoreboardBody({
           </div>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
-          <div className="text-right text-xs text-slate-500 dark:text-slate-400">
-            Melhor de {match.bestOf}
-            <p className="text-xs">até {match.targetPoints} pts</p>
-          </div>
-          {onFullscreen && (
-            <button
-              onClick={onFullscreen}
-              className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors dark:text-slate-500"
-              aria-label="Tela cheia e paisagem"
-            >
-              <Maximize size={14} /> Tela cheia
-            </button>
-          )}
+            <div className="text-right text-xs text-slate-500 dark:text-slate-400">
+              Melhor de {match.bestOf} · até {match.targetPoints} pts
+            </div>
+            {onFullscreen && (
+              <button
+                onClick={onFullscreen}
+                className="text-slate-400 hover:text-blue-600 transition-colors dark:text-slate-500"
+                aria-label="Tela cheia e paisagem"
+                title="Tela cheia e paisagem"
+              >
+                <Maximize size={16} />
+              </button>
+            )}
         </div>
       </header>
 
@@ -170,8 +170,8 @@ function ScoreboardBody({
               </button>
               <p
                 className={cn(
-                  'font-black text-white tabular-nums leading-none',
-                  'text-6xl sm:text-8xl md:text-9xl'
+                  'font-black text-white tabular-nums leading-none tracking-tight drop-shadow-[0_4px_6px_rgba(0,0,0,0.35)]',
+                  'text-7xl sm:text-8xl md:text-9xl'
                 )}
               >
                 {team.points}
@@ -181,7 +181,7 @@ function ScoreboardBody({
                   onClick={(e) => { e.stopPropagation(); onRemovePoint(team.id); }}
                   onPointerDown={(e) => e.stopPropagation()}
                   onPointerUp={(e) => e.stopPropagation()}
-                  className="w-10 h-10 rounded-full bg-white/20 text-white text-xl font-bold flex items-center justify-center hover:bg-white/30 transition-colors"
+                  className="w-12 h-12 rounded-full bg-white/15 text-white text-xl font-bold flex items-center justify-center hover:bg-white/25 transition-colors"
                   aria-label={`Remover ponto ${team.name}`}
                 >
                   −
@@ -190,18 +190,16 @@ function ScoreboardBody({
                   onClick={(e) => { e.stopPropagation(); onAddPoint(team.id); }}
                   onPointerDown={(e) => e.stopPropagation()}
                   onPointerUp={(e) => e.stopPropagation()}
-                  className="w-10 h-10 rounded-full bg-white/30 text-white text-xl font-bold flex items-center justify-center hover:bg-white/40 transition-colors"
+                  className="w-12 h-12 rounded-full bg-white/25 text-white text-xl font-bold flex items-center justify-center hover:bg-white/35 transition-colors"
                   aria-label={`Adicionar ponto ${team.name}`}
                 >
                   +
                 </button>
               </div>
-              {status ? (
-                <p className="text-white/90 text-xs font-bold uppercase tracking-wide bg-white/20 rounded-full px-3 py-0.5">
+              {status && (
+                <p className="text-white/95 text-xs font-bold uppercase tracking-wide bg-black/25 rounded-full px-3 py-0.5">
                   {status}
                 </p>
-              ) : (
-                <p className="text-white/60 text-xs font-medium">toque para pontuar</p>
               )}
             </div>
           );
@@ -248,24 +246,30 @@ function ScoreboardBody({
         </div>
       ) : (
         <div className="pt-2">
-          <div className="mx-auto grid grid-cols-3 gap-2">
+          <div className="mx-auto flex items-center justify-center gap-3">
             <button
               onClick={onResetMatch}
-              className="flex items-center justify-center gap-1.5 w-full bg-slate-200 text-slate-700 py-3 rounded-xl font-bold transition-all dark:bg-slate-700 dark:text-slate-300"
+              className="w-12 h-12 flex items-center justify-center bg-slate-200 text-slate-700 rounded-xl font-bold transition-all dark:bg-slate-700 dark:text-slate-300"
+              aria-label="Zerar"
+              title="Zerar"
             >
-              <RotateCcw size={16} /> Zerar
+              <RotateCcw size={18} />
             </button>
             <button
               onClick={onUndoLastPoint}
-              className="flex items-center justify-center gap-1.5 w-full bg-amber-100 text-amber-700 py-3 rounded-xl font-bold transition-all dark:bg-amber-900/30 dark:text-amber-300"
+              className="w-12 h-12 flex items-center justify-center bg-amber-100 text-amber-700 rounded-xl font-bold transition-all dark:bg-amber-900/30 dark:text-amber-300"
+              aria-label="Desfazer último ponto"
+              title="Desfazer"
             >
-              <Undo2 size={16} /> Desfazer
+              <Undo2 size={18} />
             </button>
             <button
               onClick={onPauseMatch}
-              className="flex items-center justify-center gap-1.5 w-full bg-slate-800 text-white py-3 rounded-xl font-bold shadow-lg transition-all dark:bg-slate-700"
+              className="w-12 h-12 flex items-center justify-center bg-slate-800 text-white rounded-xl font-bold shadow-lg transition-all dark:bg-slate-700"
+              aria-label="Pausar"
+              title="Pausar"
             >
-              <Pause size={16} /> Pausar
+              <Pause size={18} />
             </button>
           </div>
         </div>

@@ -73,8 +73,8 @@ describe('App - match configuration', () => {
     await user.click(screen.getByRole('button', { name: 'Bo1' }));
     await user.click(screen.getByRole('button', { name: 'Iniciar Placar' }));
 
-    expect(await screen.findByText('Melhor de 1')).toBeInTheDocument();
-    expect(screen.getByText('até 21 pts')).toBeInTheDocument();
+    expect(await screen.findByText(/Melhor de 1/)).toBeInTheDocument();
+    expect(screen.getByText(/até 21 pts/)).toBeInTheDocument();
   });
 });
 
