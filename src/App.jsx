@@ -87,6 +87,7 @@ function App() {
     addPoint,
     removePoint,
     undoLastPoint,
+    toggleServe,
     pauseMatch,
     resumeMatch,
     resetMatch,
@@ -312,6 +313,7 @@ function App() {
           onAddPoint={addPoint}
           onRemovePoint={removePoint}
           onUndoLastPoint={undoLastPoint}
+          onToggleServe={toggleServe}
           onPauseMatch={handlePauseMatch}
           onResetMatch={resetMatch}
           onStopMatch={handleStopMatch}

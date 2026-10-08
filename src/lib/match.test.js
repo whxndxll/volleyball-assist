@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { matchElapsedMs, formatElapsed } from './match';
+import { matchElapsedMs, formatElapsed, matchStatus, setScores, teamColor } from './match';
+
+const withScore = (aPoints, aSets, bPoints, bSets, extra = {}) => ({
+  targetPoints: 25,
+  bestOf: 3,
+  finished: false,
+  teams: [
+    { id: 't1', name: 'Time 1', points: aPoints, sets: aSets },
+    { id: 't2', name: 'Time 2', points: bPoints, sets: bSets },
+  ],
+  ...extra,
+});
 
 describe('matchElapsedMs', () => {
   it('accumulates elapsed time from the resume base', () => {
@@ -35,5 +46,46 @@ describe('formatElapsed', () => {
 
   it('formats as h:mm:ss past one hour', () => {
     expect(formatElapsed(3661000)).toBe('1:01:01');
+  });
+});
+
+describe('matchStatus', () => {
+  it('stays silent while the set is far from the target', () => {
+    expect(matchStatus(withScore(10, 0, 8, 0))).toBeNull();
+  });
+
+  it('reports a single deuce instead of one per team', () => {
+    expect(matchStatus(withScore(24, 0, 24, 0))).toEqual({ tone: 'neutral', label: 'Deuce' });
+  });
+
+  it('names the leading team on set point', () => {
+    expect(matchStatus(withScore(24, 0, 22, 0))).toEqual({
+      tone: 'set',
+      label: 'Set point — Time 1',
+    });
+  });
+
+  it('escalates to match point on the last set', () => {
+    expect(matchStatus(withScore(24, 1, 22, 1))).toEqual({
+      tone: 'match',
+      label: 'Match point — Time 1',
+    });
+  });
+
+  it('goes silent once the match is over', () => {
+    expect(matchStatus(withScore(25, 2, 20, 1, { finished: true }))).toBeNull();
+  });
+});
+
+describe('setScores', () => {
+  it('tolerates matches saved before set history existed', () => {
+    expect(setScores(withScore(3, 0, 1, 0))).toEqual([]);
+    expect(setScores(null)).toEqual([]);
+  });
+});
+
+describe('teamColor', () => {
+  it('wraps around instead of returning undefined', () => {
+    expect(teamColor(0)).toBe(teamColor(6));
   });
 });

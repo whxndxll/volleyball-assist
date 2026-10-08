@@ -42,9 +42,11 @@ const startDraw = async (user, playerCount) => {
   await user.click(screen.getByRole('button', { name: 'Todos' }));
 };
 
+const teamCard = (teamName) => screen.getByRole('group', { name: teamName });
+
 const score = async (user, teamName, times) => {
   for (let i = 0; i < times; i++) {
-    await user.click(screen.getByRole('button', { name: `Pontuar ${teamName}` }));
+    await user.click(screen.getByRole('button', { name: `Adicionar ponto ${teamName}` }));
   }
 };
 
@@ -61,8 +63,8 @@ describe('App - scoreboard', () => {
 
     expect(await screen.findByText('Placar')).toBeInTheDocument();
 
-    const team1Card = screen.getByRole('button', { name: 'Pontuar Time 1' });
-    await user.click(team1Card);
+    const team1Card = teamCard('Time 1');
+    await user.click(screen.getByRole('button', { name: 'Adicionar ponto Time 1' }));
     expect(within(team1Card).getByText('1')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Pausar' }));
@@ -74,11 +76,11 @@ describe('App - scoreboard', () => {
 
     await user.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    expect(await screen.findByRole('button', { name: 'Pontuar Time 1' })).toBeInTheDocument();
-    expect(within(screen.getByRole('button', { name: 'Pontuar Time 1' })).getByText('1')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Adicionar ponto Time 1' })).toBeInTheDocument();
+    expect(within(teamCard('Time 1')).getByText('1')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Zerar' }));
-    expect(within(screen.getByRole('button', { name: 'Pontuar Time 1' })).getByText('0')).toBeInTheDocument();
+    expect(within(teamCard('Time 1')).getByText('0')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pausar' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Voltar' }).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: 'Encerrar' })).not.toBeInTheDocument();
@@ -105,8 +107,8 @@ describe('App - scoreboard', () => {
     await user.click(await screen.findByRole('button', { name: 'Iniciar placar rápido' }));
 
     expect(await screen.findByText('Placar')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pontuar Time 1' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pontuar Time 2' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Adicionar ponto Time 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Adicionar ponto Time 2' })).toBeInTheDocument();
   });
 
   it('hints when no racha has enough players for a quick placar', async () => {
@@ -131,13 +133,13 @@ describe('App - auto set end', () => {
     await user.click(screen.getByRole('button', { name: 'Iniciar Placar' }));
 
     await score(user, 'Time 1', 3);
-    expect(within(screen.getByRole('button', { name: 'Pontuar Time 1' })).getByText('0')).toBeInTheDocument();
+    expect(within(teamCard('Time 1')).getByText('0')).toBeInTheDocument();
 
     await score(user, 'Time 2', 3);
     await score(user, 'Time 1', 3);
 
     expect(await screen.findByText('Time 1 venceu!')).toBeInTheDocument();
-    const overlay = screen.getByRole('dialog', { name: 'Resultado da partida' });
+    const overlay = screen.getByRole('alertdialog', { name: 'Resultado da partida' });
     expect(within(overlay).getByText('Time 1 2 · Time 2 1')).toBeInTheDocument();
     expect(within(overlay).getByRole('button', { name: /Zerar placar/ })).toBeInTheDocument();
     expect(within(overlay).getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
@@ -153,14 +155,104 @@ describe('App - auto set end', () => {
 
     await score(user, 'Time 1', 2);
     await score(user, 'Time 2', 2);
-    expect(screen.getAllByText('Deuce')).toHaveLength(2);
+    expect(screen.getAllByText('Deuce')).toHaveLength(1);
 
     await score(user, 'Time 1', 1);
-    expect(within(screen.getByRole('button', { name: 'Pontuar Time 1' })).getByText('3')).toBeInTheDocument();
-    expect(within(screen.getByRole('button', { name: 'Pontuar Time 2' })).getByText('2')).toBeInTheDocument();
+    expect(within(teamCard('Time 1')).getByText('3')).toBeInTheDocument();
+    expect(within(teamCard('Time 2')).getByText('2')).toBeInTheDocument();
 
     await score(user, 'Time 1', 1);
-    expect(within(screen.getByRole('button', { name: 'Pontuar Time 1' })).getByText('0')).toBeInTheDocument();
+    expect(within(teamCard('Time 1')).getByText('0')).toBeInTheDocument();
+  });
+});
+
+describe('App - set history', () => {
+  it('keeps the score of every finished set', async () => {
+    const user = userEvent.setup();
+    await startDraw(user, 12);
+    await user.click(screen.getByRole('button', { name: 'Sortear Times' }));
+
+    fireEvent.change(screen.getByLabelText('Pontos por set'), { target: { value: '5' } });
+    await user.click(screen.getByRole('button', { name: 'Iniciar Placar' }));
+
+    await score(user, 'Time 1', 4);
+    await score(user, 'Time 2', 1);
+    expect(screen.queryByLabelText('Placar por sets')).not.toBeInTheDocument();
+
+    await score(user, 'Time 1', 1);
+
+    const strip = screen.getByLabelText('Placar por sets');
+    expect(within(strip).getByLabelText('Set 1: Time 1 5 a 1')).toBeInTheDocument();
+    expect(within(teamCard('Time 1')).getByText('0')).toBeInTheDocument();
+
+    await score(user, 'Time 2', 5);
+    await score(user, 'Time 2', 1);
+    expect(within(strip).getByLabelText('Set 2: Time 2 5 a 0')).toBeInTheDocument();
+  });
+
+  it('gives the serve back to the team that lost the set', async () => {
+    const user = userEvent.setup();
+    await startDraw(user, 12);
+    await user.click(screen.getByRole('button', { name: 'Sortear Times' }));
+
+    fireEvent.change(screen.getByLabelText('Pontos por set'), { target: { value: '3' } });
+    await user.click(screen.getByRole('button', { name: 'Iniciar Placar' }));
+
+    expect(screen.getByRole('button', { name: 'Time com o saque: Time 1' })).toBeInTheDocument();
+
+    await score(user, 'Time 1', 3);
+
+    expect(screen.getByRole('button', { name: 'Time com o saque: Time 2' })).toBeInTheDocument();
+  });
+
+  it('rolls the whole set back when the winning point is undone', async () => {
+    const user = userEvent.setup();
+    await startDraw(user, 12);
+    await user.click(screen.getByRole('button', { name: 'Sortear Times' }));
+
+    fireEvent.change(screen.getByLabelText('Pontos por set'), { target: { value: '3' } });
+    await user.click(screen.getByRole('button', { name: 'Iniciar Placar' }));
+
+    await score(user, 'Time 1', 2);
+    await score(user, 'Time 2', 1);
+    await score(user, 'Time 1', 1);
+
+    expect(screen.getByLabelText('Set 1: Time 1 3 a 1')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Desfazer último ponto' }));
+
+    expect(screen.queryByLabelText('Placar por sets')).not.toBeInTheDocument();
+    expect(within(teamCard('Time 1')).getByText('2')).toBeInTheDocument();
+    expect(within(teamCard('Time 2')).getByText('1')).toBeInTheDocument();
+  });
+});
+
+describe('App - placar chrome', () => {
+  it('offers fullscreen in landscape', async () => {
+    await localforage.setItem('rachas', [rachaWithPlayers(['Ana', 'Bia'])]);
+    await localforage.setItem('activeMatch', runningMatch());
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(await screen.findByText('Racha Teste'));
+    await user.click(screen.getByRole('button', { name: /Placar em andamento/ }));
+
+    expect(await screen.findByRole('button', { name: 'Tela cheia e paisagem' })).toBeInTheDocument();
+  });
+
+  it('hides the cards from assistive tech only as groups, never as nested buttons', async () => {
+    await localforage.setItem('rachas', [rachaWithPlayers(['Ana', 'Bia'])]);
+    await localforage.setItem('activeMatch', runningMatch());
+
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(await screen.findByText('Racha Teste'));
+    await user.click(screen.getByRole('button', { name: /Placar em andamento/ }));
+
+    await screen.findByRole('group', { name: 'Time 1' });
+    expect(screen.queryByRole('button', { name: 'Pontuar Time 1' })).not.toBeInTheDocument();
   });
 });
 

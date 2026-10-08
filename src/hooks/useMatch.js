@@ -4,6 +4,13 @@ import { setsToWin } from '../lib/match';
 import { uuid } from '../lib/id';
 
 export function createMatchFromDraw(drawResult, matchConfig) {
+  const teams = drawResult.teams.map((players, i) => ({
+    id: uuid(),
+    name: `Time ${i + 1}`,
+    players,
+    points: 0,
+    sets: 0,
+  }));
   return {
     id: uuid(),
     targetPoints: Math.max(1, Number(matchConfig.targetPoints) || 25),
@@ -14,13 +21,9 @@ export function createMatchFromDraw(drawResult, matchConfig) {
     accumulatedMs: 0,
     paused: false,
     finished: false,
-    teams: drawResult.teams.map((players, i) => ({
-      id: uuid(),
-      name: `Time ${i + 1}`,
-      players,
-      points: 0,
-      sets: 0,
-    })),
+    teams,
+    setScores: [],
+    servingTeamId: teams[0] ? teams[0].id : null,
   };
 }
 
@@ -54,9 +57,24 @@ export function useMatch() {
         t.points >= prev.targetPoints && Math.abs(teams[0].points - teams[1].points) >= 2
       );
       if (leader) {
+        const loser = teams.find(t => t.id !== leader.id);
+        lastActionRef.current = { type: 'add', teamId, closedSet: true };
+        // O placar do set é registrado antes de zerar os pontos, senão 25–18 se
+        // perde assim que o set fecha.
+        const nextSetScores = [
+          ...(prev.setScores || []),
+          { teamId: leader.id, points: leader.points, loserPoints: loser ? loser.points : 0 },
+        ];
         const nextTeams = teams.map(t => ({ ...t, points: 0, sets: t.id === leader.id ? t.sets + 1 : t.sets }));
         const finished = nextTeams.some(t => t.sets >= setsToWin(prev));
-        return { ...prev, teams: nextTeams, finished };
+        return {
+          ...prev,
+          teams: nextTeams,
+          setScores: nextSetScores,
+          // Quem perdeu o set abre o próximo.
+          servingTeamId: finished ? prev.servingTeamId : loser ? loser.id : prev.servingTeamId,
+          finished,
+        };
       }
       return { ...prev, teams };
     });
@@ -68,12 +86,39 @@ export function useMatch() {
     lastActionRef.current = null;
     setMatch(prev => {
       if (!prev || prev.paused) return prev;
+      const history = prev.setScores || [];
+      const closed = last.closedSet ? history[history.length - 1] : null;
+      if (!closed) {
+        return {
+          ...prev,
+          finished: false,
+          teams: prev.teams.map(t =>
+            t.id === last.teamId ? { ...t, points: Math.max(0, t.points - 1) } : t
+          ),
+        };
+      }
+      // Desfazer o ponto que fechou o set precisa devolver o set inteiro.
       return {
         ...prev,
         finished: false,
-        teams: prev.teams.map(t =>
-          t.id === last.teamId ? { ...t, points: Math.max(0, t.points - 1) } : t
-        ),
+        setScores: history.slice(0, -1),
+        servingTeamId: closed.teamId,
+        teams: prev.teams.map(t => {
+          if (t.id === closed.teamId) {
+            return { ...t, sets: Math.max(0, t.sets - 1), points: Math.max(0, closed.points - 1) };
+          }
+          return { ...t, points: closed.loserPoints };
+        }),
+      };
+    });
+  }, [setMatch]);
+
+  const toggleServe = useCallback((teamId) => {
+    setMatch(prev => {
+      if (!prev || prev.finished) return prev;
+      return {
+        ...prev,
+        servingTeamId: prev.servingTeamId === teamId ? null : teamId,
       };
     });
   }, [setMatch]);
@@ -106,6 +151,8 @@ export function useMatch() {
       startedAt: Date.now(),
       resumedAt: Date.now(),
       accumulatedMs: 0,
+      setScores: [],
+      servingTeamId: prev.teams[0] ? prev.teams[0].id : null,
       teams: prev.teams.map(t => ({ ...t, points: 0, sets: 0 })),
     } : prev));
   }, [setMatch]);
@@ -149,6 +196,7 @@ export function useMatch() {
     addPoint,
     removePoint,
     undoLastPoint,
+    toggleServe,
     pauseMatch,
     resumeMatch,
     resetMatch,

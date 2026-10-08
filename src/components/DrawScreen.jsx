@@ -1,6 +1,6 @@
 import { ArrowLeft, Settings, Plus, Star, UserPlus, UserCheck, RefreshCw, Copy, Play, Clock } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { TEAM_COLORS } from '../lib/match';
+import { teamColor } from '../lib/match';
 
 export default function DrawScreen({
   racha,
@@ -78,9 +78,9 @@ export default function DrawScreen({
 
           <div className="grid gap-4">
             {drawResult.teams.map((team, idx) => {
-              const color = TEAM_COLORS[idx % TEAM_COLORS.length];
+              const color = teamColor(idx);
               return (
-                <div key={idx} className={cn('bg-white p-4 rounded-xl shadow-sm border-l-4 dark:bg-slate-800', color.rail, color.railDark)}>
+                <div key={idx} className={cn('bg-white p-4 rounded-xl shadow-sm border-l-4 dark:bg-slate-800', color.railLight)}>
                   <h3 className={cn('font-bold mb-2', color.label)}>
                     Time {idx + 1} · {team.length} {team.length === 1 ? 'jogador' : 'jogadores'}
                   </h3>
