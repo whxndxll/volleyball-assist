@@ -50,9 +50,9 @@ export default function PlayerList({
               onKeyDown={(e) => { if (e.key === 'Enter') onAddPlayer(newPlayerName); }}
             />
           </div>
-          {playerError && <p className="text-xs text-red-500 mt-2">{playerError}</p>}
+          {playerError && <p className="text-xs text-red-600 mt-2">{playerError}</p>}
           <div className="relative mt-3">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
               placeholder="Filtrar jogadores..."
@@ -68,6 +68,8 @@ export default function PlayerList({
             <div key={player.id} className="p-4 flex justify-between items-center group bg-white dark:bg-slate-800">
               {editingPlayerId === player.id ? (
                 <input
+                  // a edição inline só abre por ação do usuário; focar aqui é o esperado
+                  // eslint-disable-next-line jsx-a11y/no-autofocus
                   autoFocus
                   value={editingPlayerName}
                   onChange={(e) => setEditingPlayerName(e.target.value)}
@@ -86,12 +88,12 @@ export default function PlayerList({
                   aria-label={`Renomear jogador ${player.name}`}
                 >
                   {player.name}
-                  <Pencil size={14} className="text-slate-200 group-hover:text-blue-400 transition-colors dark:text-slate-600" />
+                  <Pencil size={14} className="text-slate-500 group-hover:text-blue-400 transition-colors dark:text-slate-600" />
                 </button>
               )}
               <button
                 onClick={() => onDeletePlayer(player.id)}
-                className="text-slate-300 hover:text-red-500 transition-all dark:text-slate-500"
+                className="text-slate-500 hover:text-red-600 transition-all dark:text-slate-400"
                 title="Remover jogador"
                 aria-label={`Remover jogador ${player.name}`}
               >
@@ -100,12 +102,12 @@ export default function PlayerList({
             </div>
           ))}
           {filteredPlayers.length === 0 && players.length > 0 && (
-            <div className="p-8 text-center text-slate-400 text-sm dark:text-slate-500">
+            <div className="p-8 text-center text-slate-500 text-sm dark:text-slate-400">
               Nenhum jogador encontrado.
             </div>
           )}
           {players.length === 0 && (
-            <div className="p-8 text-center text-slate-400 text-sm dark:text-slate-500">
+            <div className="p-8 text-center text-slate-500 text-sm dark:text-slate-400">
               Nenhum jogador cadastrado. Adicione o primeiro acima!
             </div>
           )}

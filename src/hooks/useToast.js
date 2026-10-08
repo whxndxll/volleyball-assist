@@ -1,21 +1,35 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
+const TOAST_MS = 5000;
+const MAX_VISIBLE = 3;
+
 export function useToast() {
-  const [toast, setToast] = useState(null);
-  const timer = useRef(null);
+  const [toasts, setToasts] = useState([]);
+  const timers = useRef(new Map());
+  const nextId = useRef(0);
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      pending.forEach(clearTimeout);
+      pending.clear();
+    };
+  }, []);
 
+  const dismissToast = useCallback((id) => {
+    clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // Cada aviso ocupa a própria fatia: um segundo "Desfazer" não pode apagar o
+  // undo de uma exclusão anterior, que ainda estava no prazo.
   const showToast = useCallback((message, actionLabel, onAction) => {
-    clearTimeout(timer.current);
-    setToast({ message, actionLabel, onAction });
-    timer.current = setTimeout(() => setToast(null), 5000);
-  }, []);
+    const id = ++nextId.current;
+    setToasts(prev => [...prev, { id, message, actionLabel, onAction }].slice(-MAX_VISIBLE));
+    timers.current.set(id, setTimeout(() => dismissToast(id), TOAST_MS));
+    return id;
+  }, [dismissToast]);
 
-  const dismissToast = useCallback(() => {
-    clearTimeout(timer.current);
-    setToast(null);
-  }, []);
-
-  return { toast, showToast, dismissToast };
+  return { toasts, showToast, dismissToast };
 }

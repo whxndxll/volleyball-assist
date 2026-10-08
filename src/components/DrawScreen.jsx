@@ -44,7 +44,7 @@ export default function DrawScreen({
 }) {
   const BenchMark = ({ player, className = '' }) =>
     benchPlayerIds.includes(player.id) ? (
-      <Clock size={14} className={cn('text-slate-400 dark:text-slate-500', className)} />
+      <Clock size={14} className={cn('text-slate-500 dark:text-slate-400', className)} />
     ) : null;
   return (
     <div className="p-4 pb-32">
@@ -89,7 +89,7 @@ export default function DrawScreen({
                       <li key={p.id} className="flex items-center gap-2">
                         <span className={cn('w-2 h-2 rounded-full', color.pip)} />
                         {p.name}
-                        {priorityPlayerIds.includes(p.id) && <Star size={14} className="fill-yellow-400 text-yellow-400" />}
+                        {priorityPlayerIds.includes(p.id) && <Star size={14} className="fill-amber-600 text-amber-600" />}
                         <BenchMark player={p} />
                       </li>
                     ))}
@@ -121,7 +121,7 @@ export default function DrawScreen({
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label htmlFor="target-points" className="text-xs font-semibold text-slate-400 uppercase dark:text-slate-500">
+                <label htmlFor="target-points" className="text-xs font-semibold text-slate-500 uppercase dark:text-slate-400">
                   Pontos por set
                 </label>
                 <input
@@ -140,7 +140,7 @@ export default function DrawScreen({
                 />
               </div>
               <div className="space-y-1">
-                <span className="block text-xs font-semibold text-slate-400 uppercase dark:text-slate-500">Formato</span>
+                <span className="block text-xs font-semibold text-slate-500 uppercase dark:text-slate-400">Formato</span>
                 <div className="flex gap-1">
                   {[1, 3, 5].map(b => (
                     <button
@@ -178,7 +178,7 @@ export default function DrawScreen({
 
           <button
             onClick={onStartMatch}
-            className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors"
+            className="w-full bg-emerald-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-600 transition-colors"
           >
             <Play size={18} /> Iniciar Placar
           </button>
@@ -191,8 +191,9 @@ export default function DrawScreen({
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-400 uppercase dark:text-slate-500">Jogadores / Time</label>
+                <label htmlFor="players-per-team" className="text-xs font-semibold text-slate-500 uppercase dark:text-slate-400">Jogadores / Time</label>
                 <input
+                  id="players-per-team"
                   type="number"
                   min="1"
                   value={config.playersPerTeam}
@@ -207,8 +208,9 @@ export default function DrawScreen({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-400 uppercase dark:text-slate-500">Max. de Times</label>
+                <label htmlFor="max-teams" className="text-xs font-semibold text-slate-500 uppercase dark:text-slate-400">Max. de Times</label>
                 <input
+                  id="max-teams"
                   type="number"
                   min="2"
                   value={config.numTeams}
@@ -222,7 +224,7 @@ export default function DrawScreen({
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
                 />
               </div>
-              <p className="text-xs text-slate-400 col-span-2 dark:text-slate-500">
+              <p className="text-xs text-slate-500 col-span-2 dark:text-slate-400">
                 Os times são formados completos até esse limite; quem sobrar fica na reserva.
               </p>
             </div>
@@ -233,10 +235,10 @@ export default function DrawScreen({
               <h3 className="font-bold">2. Presença</h3>
               <div className="flex gap-3">
                 {hasLastPresence && (
-                  <button onClick={onRestorePresence} className="text-xs font-medium text-emerald-600">Repetir presença</button>
+                  <button onClick={onRestorePresence} className="text-xs font-medium text-emerald-700">Repetir presença</button>
                 )}
                 <button onClick={onSelectAllMembers} className="text-xs font-medium text-blue-600">Todos</button>
-                <button onClick={onClearMembers} className="text-xs font-medium text-slate-400 dark:text-slate-500">Nenhum</button>
+                <button onClick={onClearMembers} className="text-xs font-medium text-slate-500 dark:text-slate-400">Nenhum</button>
               </div>
             </div>
             {showImport ? (
@@ -271,13 +273,13 @@ export default function DrawScreen({
                 Importar lista de presença
               </button>
             )}
-            <p className="text-xs text-slate-400 mb-3 dark:text-slate-500">
+            <p className="text-xs text-slate-500 mb-3 dark:text-slate-400">
               {totalSelected} selecionados ·{' '}
               {canDraw
                 ? `${fullTeams} ${fullTeams === 1 ? 'time completo' : 'times completos'} · ${totalSelected - fullTeams * playersPerTeam} reserva`
                 : `faltam ${shortForTwoTeams} para 2 times completos`}
             </p>
-            <p className="text-xs text-slate-400 mb-3 dark:text-slate-500">
+            <p className="text-xs text-slate-500 mb-3 dark:text-slate-400">
               Estrela prioriza (Times 1 e 2). Relógio marca reserva — confirmou presença mas ainda não chegou.
             </p>
 
@@ -323,18 +325,18 @@ export default function DrawScreen({
                       onClick={(e) => { e.stopPropagation(); onTogglePriority(player.id); }}
                       className={cn(
                         'p-1 rounded-full transition-colors',
-                        isPriority ? 'text-yellow-500' : 'text-slate-300 hover:text-yellow-400 dark:text-slate-500'
+                        isPriority ? 'text-amber-600' : 'text-slate-500 hover:text-amber-600 dark:text-slate-400'
                       )}
                       title="Prioridade: vai para os Times 1 e 2"
                       aria-label={`${isPriority ? 'Remover prioridade' : 'Priorizar'} ${player.name}`}
                     >
-                      <Star size={20} className={isPriority ? 'fill-yellow-500' : ''} />
+                      <Star size={20} className={isPriority ? 'fill-amber-600' : ''} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); onToggleBench(player.id); }}
                       className={cn(
                         'p-1 rounded-full transition-colors',
-                        isBench ? 'text-slate-600 dark:text-slate-300' : 'text-slate-300 hover:text-slate-500 dark:text-slate-500'
+                        isBench ? 'text-slate-600 dark:text-slate-300' : 'text-slate-500 hover:text-slate-600 dark:text-slate-400'
                       )}
                       title="Reserva: confirmou presença mas ainda não chegou"
                       aria-label={`${isBench ? 'Remover' : 'Marcar'} ${player.name} como reserva`}
@@ -367,7 +369,7 @@ export default function DrawScreen({
                 <UserPlus size={18} />
               </button>
             </div>
-            <p className="text-xs text-slate-400 mb-2 dark:text-slate-500">Convidados não são salvos na lista do racha.</p>
+            <p className="text-xs text-slate-500 mb-2 dark:text-slate-400">Convidados não são salvos na lista do racha.</p>
             <div className="flex flex-wrap gap-2">
               {guests.map(guest => (
                 <div key={guest.id} className="flex items-center gap-1 bg-slate-200 px-3 py-1 rounded-full text-sm dark:bg-slate-700">
@@ -384,17 +386,17 @@ export default function DrawScreen({
                     onClick={() => onTogglePriority(guest.id)}
                     className={cn(
                       'ml-0.5',
-                      priorityPlayerIds.includes(guest.id) ? 'text-yellow-600' : 'text-slate-400'
+                      priorityPlayerIds.includes(guest.id) ? 'text-amber-600' : 'text-slate-500'
                     )}
                     title="Prioridade: vai para os Times 1 e 2"
                     aria-label={`${priorityPlayerIds.includes(guest.id) ? 'Remover prioridade' : 'Priorizar'} ${guest.name}`}
                   >
-                    <Star size={14} className={priorityPlayerIds.includes(guest.id) ? 'fill-yellow-600' : ''} />
+                    <Star size={14} className={priorityPlayerIds.includes(guest.id) ? 'fill-amber-600' : ''} />
                   </button>
                   <button
                     onClick={() => onToggleBench(guest.id)}
                     className={cn(
-                      benchPlayerIds.includes(guest.id) ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400'
+                      benchPlayerIds.includes(guest.id) ? 'text-slate-600 dark:text-slate-300' : 'text-slate-500'
                     )}
                     title="Reserva: confirmou presença mas ainda não chegou"
                     aria-label={`${benchPlayerIds.includes(guest.id) ? 'Remover' : 'Marcar'} ${guest.name} como reserva`}
@@ -403,7 +405,7 @@ export default function DrawScreen({
                   </button>
                   <button
                     onClick={() => onRemoveGuest(guest.id)}
-                    className="text-slate-500 hover:text-red-500 dark:text-slate-400"
+                    className="text-slate-500 hover:text-red-600 dark:text-slate-400"
                     title="Remover convidado"
                   >
                     <Plus size={14} className="rotate-45" />
@@ -427,7 +429,7 @@ export default function DrawScreen({
                 Sortear Times
               </button>
               {!canDraw && (
-                <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                <p className="text-center text-xs text-slate-500 dark:text-slate-400">
                   Faltam {shortForTwoTeams} jogador{shortForTwoTeams === 1 ? '' : 'es'} para formar 2 times completos.
                 </p>
               )}

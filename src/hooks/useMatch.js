@@ -23,13 +23,12 @@ export function createMatchFromDraw(drawResult, matchConfig) {
     finished: false,
     teams,
     setScores: [],
-    servingTeamId: teams[0] ? teams[0].id : null,
   };
 }
 
-export function useMatch() {
-  const [match, setMatch, isMatchLoading] = useLocalStorage('activeMatch', null);
-  const [matchHistory, setMatchHistory] = useLocalStorage('matchHistory', []);
+export function useMatch(onError) {
+  const [match, setMatch, isMatchLoading] = useLocalStorage('activeMatch', null, onError);
+  const [matchHistory, setMatchHistory] = useLocalStorage('matchHistory', [], onError);
   const [matchConfig, setMatchConfig] = useState({ targetPoints: 25, bestOf: 3 });
   const lastActionRef = useRef(null);
 
@@ -71,8 +70,6 @@ export function useMatch() {
           ...prev,
           teams: nextTeams,
           setScores: nextSetScores,
-          // Quem perdeu o set abre o próximo.
-          servingTeamId: finished ? prev.servingTeamId : loser ? loser.id : prev.servingTeamId,
           finished,
         };
       }
@@ -102,23 +99,12 @@ export function useMatch() {
         ...prev,
         finished: false,
         setScores: history.slice(0, -1),
-        servingTeamId: closed.teamId,
         teams: prev.teams.map(t => {
           if (t.id === closed.teamId) {
             return { ...t, sets: Math.max(0, t.sets - 1), points: Math.max(0, closed.points - 1) };
           }
           return { ...t, points: closed.loserPoints };
         }),
-      };
-    });
-  }, [setMatch]);
-
-  const toggleServe = useCallback((teamId) => {
-    setMatch(prev => {
-      if (!prev || prev.finished) return prev;
-      return {
-        ...prev,
-        servingTeamId: prev.servingTeamId === teamId ? null : teamId,
       };
     });
   }, [setMatch]);
@@ -152,24 +138,32 @@ export function useMatch() {
       resumedAt: Date.now(),
       accumulatedMs: 0,
       setScores: [],
-      servingTeamId: prev.teams[0] ? prev.teams[0].id : null,
       teams: prev.teams.map(t => ({ ...t, points: 0, sets: 0 })),
     } : prev));
   }, [setMatch]);
 
-  const stopMatch = useCallback(() => {
-    setMatch(prev => {
-      if (prev && (prev.teams.some(t => t.sets > 0 || t.points > 0) || prev.finished)) {
-        const snapshot = {
-          ...prev,
-          endedAt: Date.now(),
-          winner: prev.teams.find(t => t.sets >= setsToWin(prev))?.name || null,
-        };
-        setMatchHistory(hist => [snapshot, ...hist].slice(0, 50));
-      }
-      return null;
-    });
-  }, [setMatch, setMatchHistory]);
+  // Devolve o snapshot arquivado para que a chamada possa oferecer "Desfazer":
+// parar o placar descarta a partida em andamento e, sem isso, era irreversível.
+const stopMatch = useCallback(() => {
+  if (!match) return null;
+  const hadProgress = match.teams.some(t => t.sets > 0 || t.points > 0) || match.finished;
+  const snapshot = hadProgress
+    ? {
+      ...match,
+      endedAt: Date.now(),
+      winner: match.teams.find(t => t.sets >= setsToWin(match))?.name || null,
+    }
+    : null;
+  setMatch(null);
+  if (snapshot) setMatchHistory(hist => [snapshot, ...hist].slice(0, 50));
+  return snapshot;
+}, [match, setMatch, setMatchHistory]);
+
+const restoreMatch = useCallback((snapshot) => {
+  if (!snapshot) return;
+  setMatch(snapshot);
+  setMatchHistory(hist => hist.filter(m => m.id !== snapshot.id));
+}, [setMatch, setMatchHistory]);
 
   const clearMatchHistory = useCallback(() => {
     setMatchHistory([]);
@@ -191,16 +185,17 @@ export function useMatch() {
     matchConfig,
     setMatchConfig,
     matchWinner,
-    matchHistory,
+matchHistory,
+    setMatchHistory,
     startMatch,
     addPoint,
     removePoint,
     undoLastPoint,
-    toggleServe,
     pauseMatch,
     resumeMatch,
     resetMatch,
     stopMatch,
+    restoreMatch,
     clearMatchHistory,
     renameTeam,
   };

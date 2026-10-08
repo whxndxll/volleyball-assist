@@ -33,7 +33,7 @@ function PlacarCard({ match, onContinue, onReset, onStop, onQuickStart }) {
   const [t0, t1] = match.teams;
 
   return (
-    <div className="bg-emerald-600 rounded-2xl p-4 text-white shadow-lg shadow-emerald-200 dark:shadow-none">
+    <div className="bg-emerald-700 rounded-2xl p-4 text-white shadow-lg shadow-emerald-900/30 dark:shadow-none">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Timer size={18} />
@@ -69,7 +69,7 @@ function PlacarCard({ match, onContinue, onReset, onStop, onQuickStart }) {
         </button>
         <button
           onClick={onStop}
-          className="bg-rose-500 py-2.5 rounded-xl font-bold text-sm hover:bg-rose-600 transition-colors"
+          className="bg-rose-600 py-2.5 rounded-xl font-bold text-sm hover:bg-rose-700 transition-colors"
         >
           Parar
         </button>
@@ -158,7 +158,7 @@ export default function RachaList({
               <Plus size={24} />
             </button>
           </div>
-          {rachaError && <p className="text-xs text-red-500">{rachaError}</p>}
+          {rachaError && <p className="text-xs text-red-600">{rachaError}</p>}
         </div>
 
         <div className="grid gap-3">
@@ -182,6 +182,8 @@ export default function RachaList({
                 </div>
                 {editingRachaId === racha.id ? (
                   <input
+                    // a edição inline só abre por ação do usuário; focar aqui é o esperado
+                    // eslint-disable-next-line jsx-a11y/no-autofocus
                     autoFocus
                     value={editingRachaName}
                     onChange={(e) => setEditingRachaName(e.target.value)}
@@ -196,14 +198,14 @@ export default function RachaList({
                 ) : (
                   <div className="min-w-0">
                     <h3 className="font-semibold truncate">{racha.name}</h3>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">{racha.players.length} jogadores</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{racha.players.length} jogadores</p>
                   </div>
                 )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={(e) => { e.stopPropagation(); onStartEditRacha(racha); }}
-                  className="p-2 text-slate-300 hover:text-blue-500 transition-colors dark:text-slate-500"
+                  className="p-2 text-slate-500 hover:text-blue-500 transition-colors dark:text-slate-400"
                   title="Renomear racha"
                   aria-label={`Renomear racha ${racha.name}`}
                 >
@@ -211,18 +213,18 @@ export default function RachaList({
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); onDeleteRacha(racha); }}
-                  className="p-2 text-slate-300 hover:text-red-500 transition-colors dark:text-slate-500"
+                  className="p-2 text-slate-500 hover:text-red-600 transition-colors dark:text-slate-400"
                   title="Excluir racha"
                   aria-label={`Excluir racha ${racha.name}`}
                 >
                   <Trash2 size={18} />
                 </button>
-                <ChevronRight className="text-slate-300 group-hover:text-blue-500 transition-colors dark:text-slate-600" size={20} />
+                <ChevronRight className="text-slate-500 group-hover:text-blue-500 transition-colors dark:text-slate-600" size={20} />
               </div>
             </div>
           ))}
           {rachas.length === 0 && (
-            <div className="text-center py-12 text-slate-400 dark:text-slate-500">
+            <div className="text-center py-12 text-slate-500 dark:text-slate-400">
               <p>Nenhum racha cadastrado ainda.</p>
               <p className="text-sm">Crie um no campo acima!</p>
             </div>
@@ -235,7 +237,7 @@ export default function RachaList({
               <h2 className="font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-2">
                 <History size={16} /> Histórico de partidas
               </h2>
-              <button onClick={onClearHistory} className="text-xs text-slate-400 hover:text-red-500 dark:text-slate-500">
+              <button onClick={onClearHistory} className="text-xs text-slate-500 hover:text-red-600 dark:text-slate-400">
                 Limpar
               </button>
             </div>
@@ -244,13 +246,13 @@ export default function RachaList({
                 <div key={m.id} className="bg-white p-3 rounded-lg border border-slate-100 text-sm dark:bg-slate-800 dark:border-slate-700">
                   <div className="flex justify-between items-center">
                     <span className="font-medium">{m.teams.map(t => t.name).join(' vs ')}</span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                       {new Date(m.endedAt || m.createdAt).toLocaleDateString('pt-BR')}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {m.teams.map(t => `${t.name} ${t.sets} set${t.sets === 1 ? '' : 's'}`).join(' · ')}
-                    {m.winner && <span className="text-emerald-600 dark:text-emerald-400 font-medium"> · {m.winner} venceu</span>}
+                    {m.winner && <span className="text-emerald-700 dark:text-emerald-400 font-medium"> · {m.winner} venceu</span>}
                   </p>
                 </div>
               ))}
@@ -259,7 +261,7 @@ export default function RachaList({
         )}
 
         <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
-          <p className="text-xs text-slate-400 mb-3 dark:text-slate-500">Backup: exporte ou restaure seus dados.</p>
+          <p className="text-xs text-slate-500 mb-3 dark:text-slate-400">Backup: exporte ou restaure seus dados.</p>
           <div className="flex gap-2">
             <button
               onClick={onExport}
@@ -268,9 +270,16 @@ export default function RachaList({
             >
               <Download size={16} /> {isExporting ? 'Exportando...' : 'Exportar'}
             </button>
-            <label className={`flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-semibold cursor-pointer hover:border-blue-200 hover:text-blue-600 transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 ${isImporting ? 'opacity-50 pointer-events-none' : ''}`}>
+            <label htmlFor="import-backup" className={`flex-1 flex items-center justify-center gap-2 bg-white border border-slate-200 text-slate-600 py-2.5 rounded-xl text-sm font-semibold cursor-pointer hover:border-blue-200 hover:text-blue-600 transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 ${isImporting ? 'opacity-50 pointer-events-none' : ''}`}>
               <Upload size={16} /> {isImporting ? 'Importando...' : 'Importar'}
-              <input type="file" accept="application/json,.json" className="hidden" onChange={onImportFile} disabled={isImporting} />
+              <input
+                id="import-backup"
+                type="file"
+                accept="application/json,.json"
+                className="sr-only"
+                onChange={onImportFile}
+                disabled={isImporting}
+              />
             </label>
           </div>
         </div>

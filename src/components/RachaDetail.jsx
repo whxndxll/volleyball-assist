@@ -39,7 +39,7 @@ export default function RachaDetail({
         {activeMatch && (
           <button
             onClick={onPlacar}
-            className="bg-emerald-600 p-6 rounded-2xl shadow-lg shadow-emerald-200 flex flex-col gap-3 items-start text-left hover:bg-emerald-700 transition-all dark:shadow-none dark:bg-emerald-700 dark:hover:bg-emerald-600"
+            className="bg-emerald-700 p-6 rounded-2xl shadow-lg shadow-emerald-900/30 flex flex-col gap-3 items-start text-left hover:bg-emerald-600 transition-all"
           >
             <div className="bg-white/20 p-3 rounded-xl text-white">
               <Play size={24} />
@@ -52,8 +52,8 @@ export default function RachaDetail({
                     className={cn(
                       'text-xs font-bold px-2 py-0.5 rounded-full',
                       activeMatch.paused
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-white/20 text-white animate-pulse'
+                        ? 'bg-amber-300 text-slate-950'
+                        : 'bg-white/20 text-white motion-safe:animate-pulse'
                     )}
                   >
                     {activeMatch.paused ? 'EM PAUSA' : 'AO VIVO'}

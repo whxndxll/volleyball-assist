@@ -2,8 +2,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { uuid } from '../lib/id';
 
-export function useRachas() {
-  const [rachas, setRachas, isLoading] = useLocalStorage('rachas', []);
+export function useRachas(onError) {
+  const [rachas, setRachas, isLoading] = useLocalStorage('rachas', [], onError);
   const [activeRachaId, setActiveRachaId] = useState(null);
   const [newRachaName, setNewRachaName] = useState('');
   const [newPlayerName, setNewPlayerName] = useState('');

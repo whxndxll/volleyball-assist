@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRachas } from './hooks/useRachas';
 import { useMatch, createMatchFromDraw } from './hooks/useMatch';
 import { useDraw } from './hooks/useDraw';
@@ -7,6 +7,7 @@ import { serializeBackup, parseBackup } from './lib/backup';
 import { stripCaptainMark } from './lib/presence';
 import { useToast } from './hooks/useToast';
 import Toast from './components/Toast';
+import ConfirmDialog from './components/ConfirmDialog';
 import RachaList from './components/RachaList';
 import RachaDetail from './components/RachaDetail';
 import PlayerList from './components/PlayerList';
@@ -38,10 +39,18 @@ function App() {
       const stored = localStorage.getItem('va-theme');
       if (stored) return stored === 'dark';
     } catch {
-      // localStorage pode ser bloqueado
+      // localStorage pode estar bloqueado
     }
     return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
+
+  const { toasts, showToast, dismissToast } = useToast();
+
+  // Falha de gravação é o modo de perda silenciosa do app: sem isto a tela
+  // mostra a alteração como salva e ela nunca chega ao IndexedDB.
+  const notifyStorageFailure = useCallback(() => {
+    showToast('Não foi possível gravar seus dados. Exporte um backup para não perder o que está na tela.');
+  }, [showToast]);
 
   const {
     rachas,
@@ -74,7 +83,7 @@ function App() {
     restorePlayer,
     startEditPlayer,
     savePlayerName,
-  } = useRachas();
+  } = useRachas(notifyStorageFailure);
 
   const {
     match,
@@ -87,15 +96,16 @@ function App() {
     addPoint,
     removePoint,
     undoLastPoint,
-    toggleServe,
     pauseMatch,
     resumeMatch,
     resetMatch,
     stopMatch,
+    restoreMatch,
     matchHistory,
+    setMatchHistory,
     clearMatchHistory,
     renameTeam,
-  } = useMatch();
+  } = useMatch(notifyStorageFailure);
 
   const {
     selectedPlayerIds,
@@ -133,8 +143,6 @@ function App() {
     restoreLastPresence,
   } = useDraw();
 
-  const { toast, showToast, dismissToast } = useToast();
-
   const handlePauseMatch = () => {
     pauseMatch();
     setView('list');
@@ -146,8 +154,9 @@ function App() {
   };
 
   const handleStopMatch = () => {
-    stopMatch();
+    const snapshot = stopMatch();
     setView(activeRacha ? 'detail' : 'list');
+    if (snapshot) showToast('Placar parado', 'Desfazer', () => restoreMatch(snapshot));
   };
 
   useEffect(() => {
@@ -250,11 +259,12 @@ function App() {
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [pendingImport, setPendingImport] = useState(null);
 
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const blob = new Blob([serializeBackup({ rachas })], { type: 'application/json' });
+      const blob = new Blob([serializeBackup({ rachas, matchHistory })], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -269,24 +279,23 @@ function App() {
     }
   };
 
+  // Importar substitui tudo, então o arquivo é lido e validado primeiro e a
+  // confirmação vem depois: assim o usuário não confirma algo que ainda pode ser
+  // rejeitado, e o estado anterior fica disponível para desfazer.
   const handleImportFile = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    event.target.value = '';
     setIsImporting(true);
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const { rachas: importedRachas } = parseBackup(reader.result);
-        setRachas(importedRachas);
-        setMatch(null);
-        setActiveRachaId(null);
-        setView('list');
-        showToast('Dados importados com sucesso!');
+        const parsed = parseBackup(reader.result);
+        setPendingImport(parsed);
       } catch {
         showToast('Arquivo de backup inválido.');
       } finally {
         setIsImporting(false);
-        event.target.value = '';
       }
     };
     reader.onerror = () => {
@@ -294,6 +303,21 @@ function App() {
       showToast('Erro ao ler o arquivo.');
     };
     reader.readAsText(file);
+  };
+
+  const confirmImport = () => {
+    const previous = { rachas, match, matchHistory };
+    setRachas(pendingImport.rachas);
+    setMatchHistory(pendingImport.matchHistory);
+    setMatch(null);
+    setActiveRachaId(null);
+    setView('list');
+    setPendingImport(null);
+    showToast('Dados importados!', 'Desfazer', () => {
+      setRachas(previous.rachas);
+      setMatchHistory(previous.matchHistory);
+      setMatch(previous.match);
+    });
   };
 
   if (isLoading || isMatchLoading) {
@@ -313,7 +337,6 @@ function App() {
           onAddPoint={addPoint}
           onRemovePoint={removePoint}
           onUndoLastPoint={undoLastPoint}
-          onToggleServe={toggleServe}
           onPauseMatch={handlePauseMatch}
           onResetMatch={resetMatch}
           onStopMatch={handleStopMatch}
@@ -432,7 +455,18 @@ function App() {
       </div>
       )}
 
-      <Toast toast={toast} onDismiss={dismissToast} />
+      <Toast toasts={toasts} onDismiss={dismissToast} />
+
+      {pendingImport && (
+        <ConfirmDialog
+          title="Importar backup?"
+          description={`Este arquivo tem ${pendingImport.rachas.length} racha${pendingImport.rachas.length === 1 ? '' : 's'}. Importar substitui todos os seus dados atuais e encerra o placar em andamento.`}
+          confirmLabel="Importar"
+          tone="danger"
+          onConfirm={confirmImport}
+          onCancel={() => setPendingImport(null)}
+        />
+      )}
     </div>
   );
 }

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ChevronUp,
-  CircleDot,
   Maximize,
   Minus,
   Pause,
@@ -48,7 +47,6 @@ function ScoreboardBody({
   onAddPoint,
   onRemovePoint,
   onUndoLastPoint,
-  onToggleServe,
   onPauseMatch,
   onResetMatch,
   onStopMatch,
@@ -184,7 +182,6 @@ function ScoreboardBody({
         {match.teams.map((team, idx) => {
           const color = teamColor(idx);
           const isLeading = !match.finished && t0.points !== t1.points && team.id === leader.id;
-          const isServing = match.servingTeamId === team.id;
           const isWinner = Boolean(winner) && match.finished && team.id === winner.id;
           return (
             <div
@@ -229,28 +226,6 @@ function ScoreboardBody({
                 >
                   {team.name}
                 </button>
-                {onToggleServe && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleServe(team.id);
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onPointerUp={(e) => e.stopPropagation()}
-                    aria-pressed={isServing}
-                    aria-label={isServing ? `Time com o saque: ${team.name}` : `Dar o saque ao ${team.name}`}
-                    title={isServing ? 'Sacar' : 'Dar o saque'}
-                    className={cn(
-                      'shrink-0 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide transition-colors',
-                      isServing
-                        ? 'bg-white text-slate-950'
-                        : 'bg-white/10 text-slate-300 hover:bg-white/20'
-                    )}
-                  >
-                    <CircleDot size={11} aria-hidden="true" />
-                    Saque
-                  </button>
-                )}
               </div>
 
               <div className="flex items-center justify-center gap-2 w-full">
@@ -407,6 +382,8 @@ function RenameTeamDialog({ value, onChange, onCancel, onSave }) {
       <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
         <h2 className="text-lg font-bold mb-4">Renomear time</h2>
         <input
+          // o modal de renomear só abre por ação do usuário; focar aqui é o esperado
+          // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus
           value={value}
           onChange={(e) => onChange(e.target.value)}

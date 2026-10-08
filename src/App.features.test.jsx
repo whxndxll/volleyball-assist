@@ -190,21 +190,6 @@ describe('App - set history', () => {
     expect(within(strip).getByLabelText('Set 2: Time 2 5 a 0')).toBeInTheDocument();
   });
 
-  it('gives the serve back to the team that lost the set', async () => {
-    const user = userEvent.setup();
-    await startDraw(user, 12);
-    await user.click(screen.getByRole('button', { name: 'Sortear Times' }));
-
-    fireEvent.change(screen.getByLabelText('Pontos por set'), { target: { value: '3' } });
-    await user.click(screen.getByRole('button', { name: 'Iniciar Placar' }));
-
-    expect(screen.getByRole('button', { name: 'Time com o saque: Time 1' })).toBeInTheDocument();
-
-    await score(user, 'Time 1', 3);
-
-    expect(screen.getByRole('button', { name: 'Time com o saque: Time 2' })).toBeInTheDocument();
-  });
-
   it('rolls the whole set back when the winning point is undone', async () => {
     const user = userEvent.setup();
     await startDraw(user, 12);
