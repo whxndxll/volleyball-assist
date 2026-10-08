@@ -80,14 +80,14 @@ export default function DrawScreen({
             {drawResult.teams.map((team, idx) => {
               const color = TEAM_COLORS[idx % TEAM_COLORS.length];
               return (
-                <div key={idx} className={cn('bg-white p-4 rounded-xl shadow-sm border-l-4 dark:bg-slate-800', color.border, color.darkBorder)}>
-                  <h3 className={cn('font-bold mb-2', color.title, color.darkTitle)}>
+                <div key={idx} className={cn('bg-white p-4 rounded-xl shadow-sm border-l-4 dark:bg-slate-800', color.rail, color.railDark)}>
+                  <h3 className={cn('font-bold mb-2', color.label)}>
                     Time {idx + 1} · {team.length} {team.length === 1 ? 'jogador' : 'jogadores'}
                   </h3>
                   <ul className="space-y-1">
                     {team.map(p => (
                       <li key={p.id} className="flex items-center gap-2">
-                        <span className={cn('w-2 h-2 rounded-full', color.dot, color.darkDot)} />
+                        <span className={cn('w-2 h-2 rounded-full', color.pip)} />
                         {p.name}
                         {priorityPlayerIds.includes(p.id) && <Star size={14} className="fill-yellow-400 text-yellow-400" />}
                         <BenchMark player={p} />

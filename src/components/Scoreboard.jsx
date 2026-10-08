@@ -141,9 +141,11 @@ function ScoreboardBody({
               className={cn(
                 'rounded-3xl shadow-lg touch-none select-none flex flex-col items-center justify-center gap-2 p-4',
                 'sm:py-6',
-                match.finished && 'opacity-90',
-                color.bg,
-                color.darkBg
+                'bg-slate-950 dark:bg-slate-950 text-white border border-slate-800 border-t-4',
+                color.rail,
+                color.railDark,
+                !match.finished && t0.points !== t1.points && team.id === leader.id && `ring-2 ${color.ring}`,
+                match.finished && 'opacity-90'
               )}
             >
               <div className="flex gap-1.5" aria-label={`${team.sets} sets`}>
@@ -151,8 +153,8 @@ function ScoreboardBody({
                   <span
                     key={i}
                     className={cn(
-                      'w-2.5 h-2.5 rounded-full transition-colors',
-                      i < team.sets ? 'bg-white' : 'bg-white/30'
+                      'w-3 h-3 rounded-full transition-colors',
+                      i < team.sets ? color.pip : 'border border-white/40 bg-transparent'
                     )}
                   />
                 ))}
@@ -162,20 +164,22 @@ function ScoreboardBody({
                   e.stopPropagation();
                   onEditTeam(team);
                 }}
-                className="font-bold text-white text-sm sm:text-base truncate max-w-full px-1"
+                className={cn('font-bold text-sm sm:text-base truncate max-w-full px-1', color.name)}
                 title="Toque para renomear"
                 aria-label={`Renomear ${team.name}`}
               >
                 {team.name}
               </button>
-              <p
-                className={cn(
-                  'font-black text-white tabular-nums leading-none tracking-tight drop-shadow-[0_4px_6px_rgba(0,0,0,0.35)]',
-                  'text-7xl sm:text-8xl md:text-9xl'
-                )}
-              >
-                {team.points}
-              </p>
+              <div className="w-full rounded-2xl bg-black/40 px-2 py-1 text-center">
+                <p
+                  className={cn(
+                    'font-black text-white tabular-nums leading-none tracking-tight drop-shadow-[0_4px_6px_rgba(0,0,0,0.35)]',
+                    'text-7xl sm:text-8xl md:text-9xl'
+                  )}
+                >
+                  {team.points}
+                </p>
+              </div>
               <div className="flex items-center gap-4 mt-1">
                 <button
                   onClick={(e) => { e.stopPropagation(); onRemovePoint(team.id); }}
@@ -197,7 +201,7 @@ function ScoreboardBody({
                 </button>
               </div>
               {status && (
-                <p className="text-white/95 text-xs font-bold uppercase tracking-wide bg-black/25 rounded-full px-3 py-0.5">
+                <p className="bg-amber-300 text-slate-950 text-xs font-black uppercase tracking-wide rounded-full px-3 py-0.5">
                   {status}
                 </p>
               )}
